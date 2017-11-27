@@ -1,0 +1,154 @@
+#!/bin/bash
+
+set -e
+
+# run 'doctl compute region list' for a list of available regions
+REGION=${REGION:-nyc3}
+
+# master/node sizes
+MASTER_SIZE=2gb
+NODE_SIZE=4gb
+
+command_exists () {
+    type "$1" &> /dev/null;
+}
+
+TEMP_DIR=$(mktemp -d)
+# deletes the temp directory
+function cleanup {
+  rm -rf "$TEMP_DIR"
+}
+# register the cleanup function to be called on the EXIT signal
+trap cleanup EXIT
+
+# check doctl
+if ! command_exists doctl; then
+    echo "Please install doctl: brew install doctl"
+    exit 1
+fi
+
+# check kubectl
+if ! command_exists kubectl; then
+    echo "Please install doctl: brew install kubectl"
+    exit 1
+fi
+
+# generate k8s specific ssh keys
+if [ ! -f ~/.ssh/k8s/id_rsa ]; then
+    mkdir -p ~/.ssh/k8s/
+    ssh-keygen -t rsa -b 4096 -C "k8s" -f ~/.ssh/k8s/id_rsa -N '' > /dev/null
+
+    # import the new ssh key
+    doctl compute ssh-key import k8s-ssh --public-key-file ~/.ssh/k8s/id_rsa.pub
+fi
+
+SSH_ID=$(doctl compute ssh-key list | grep "k8s-ssh" | cut -d' ' -f1)
+SSH_KEY=$(doctl compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
+
+# create tags
+doctl compute tag create k8s-master > /dev/null
+doctl compute tag create k8s-node > /dev/null
+
+# Generate token and insert into the script files
+TOKEN6=$(env LC_CTYPE=C tr -dc 'a-z0-9' < /dev/urandom | fold -w "${1:-6}" | head -n 1)
+TOKEN16=$(env LC_CTYPE=C tr -dc 'a-z0-9' < /dev/urandom | fold -w "${1:-16}" | head -n 1)
+TOKEN="${TOKEN6}"."${TOKEN16}"
+
+# update the master.sh/node.sh with TOKEN
+sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" templates/master.sh.template > "${TEMP_DIR}"/master.sh
+sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" templates/node.sh.template > "${TEMP_DIR}"/node.sh
+
+echo "- Creating the master"
+
+# create the master
+doctl compute droplet create master \
+	--region "${REGION}" \
+	--image ubuntu-16-04-x64 \
+	--size "${MASTER_SIZE}" \
+	--tag-name k8s-master \
+	--ssh-keys "${SSH_KEY}" \
+    --enable-private-networking \
+	--user-data-file "${TEMP_DIR}"/master.sh \
+	--wait
+
+# get the public/private ips of the master
+MASTER_ID=$(doctl compute droplet list | grep "master" |cut -d' ' -f1)
+PUBLIC_IP=$(doctl compute droplet get "${MASTER_ID}" --format PublicIPv4 --no-header)
+PRIVATE_IP=$(doctl compute droplet get "${MASTER_ID}" --format PrivateIPv4 --no-header)
+
+echo "- Waiting master to finish installation"
+
+# wait till we get admin.conf
+while ! scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/k8s/id_rsa root@"${PUBLIC_IP}":/etc/kubernetes/admin.conf . 2> /dev/null; do
+    sleep 10
+done
+
+KUBECONFIG=$(pwd)/admin.conf
+export KUBECONFIG
+
+# update the node.sh with MASTER_IP
+sed -i "" "s/^MASTER_IP=.*/MASTER_IP=${PRIVATE_IP}/" "${TEMP_DIR}"/node.sh
+
+echo "- Creating nodes"
+
+# join the nodes to the cluster
+doctl compute droplet create node1 node2 node3 \
+	--region "${REGION}" \
+	--image ubuntu-16-04-x64 \
+	--size "${NODE_SIZE}" \
+	--tag-name k8s-node \
+	--ssh-keys "${SSH_KEY}" \
+    --enable-private-networking \
+	--user-data-file "${TEMP_DIR}"/node.sh \
+	--wait
+
+echo "- Waiting nodes to be ready"
+# wait till nodes are ready
+until [ "$(kubectl get nodes 2> /dev/null| grep -v master | grep -c Ready | xargs)" == 3 ]
+do
+    sleep 10
+done
+
+echo "- Creating grafana/influxdb/heapster"
+# deploy grafana/influxdb/heapster
+kubectl create -f https://raw.githubusercontent.com/kubernetes/heapster/master/deploy/kube-config/influxdb/grafana.yaml > /dev/null 2>&1
+kubectl create -f https://raw.githubusercontent.com/kubernetes/heapster/master/deploy/kube-config/influxdb/influxdb.yaml > /dev/null 2>&1
+kubectl create -f https://raw.githubusercontent.com/kubernetes/heapster/master/deploy/kube-config/influxdb/heapster.yaml > /dev/null 2>&1
+kubectl create -f https://raw.githubusercontent.com/kubernetes/heapster/master/deploy/kube-config/rbac/heapster-rbac.yaml > /dev/null 2>&1
+
+# set dashboard access to admin
+cat <<EOF | kubectl create -f - > /dev/null 2>&1
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: kubernetes-dashboard
+  labels:
+    k8s-app: kubernetes-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: kube-system
+EOF
+
+echo "- Creating sock shop app"
+
+# deploy the sock-shop
+kubectl create namespace sock-shop > /dev/null 2>&1
+kubectl create -n sock-shop -f https://raw.githubusercontent.com/microservices-demo/microservices-demo/master/deploy/kubernetes/complete-demo.yaml > /dev/null 2>&1
+
+echo "- Creating the LoadBalancer"
+# find the frontend's NodePort
+NODEPORT=$(kubectl -n sock-shop get svc -o go-template='{{range .items}}{{range.spec.ports}}{{if .nodePort}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
+# create the load balancer for sock-shop
+doctl compute load-balancer create \
+	--name nodes \
+	--tag-name k8s-node \
+	--region "${REGION}" \
+	--health-check protocol:http,port:"${NODEPORT}",path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
+	--forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:"${NODEPORT}"
+
+echo "- Installation completed"

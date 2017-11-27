@@ -1,0 +1,33 @@
+#!/bin/bash
+
+TOKEN=TOKEN
+
+apt-get update && apt-get upgrade -y
+
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
+deb http://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+
+apt-get update -y
+
+apt-get install -y docker.io
+apt-get install -y --allow-unauthenticated kubelet kubeadm kubectl kubernetes-cni
+
+PUBLIC_IP=$(curl -s http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
+PRIVATE_IP=$(curl -s http://169.254.169.254/metadata/v1/interfaces/private/0/ipv4/address)
+
+export PUBLIC_IP
+export PRIVATE_IP
+
+#calico
+kubeadm init --pod-network-cidr=192.168.0.0/16 --token "${TOKEN}" --apiserver-bind-port 443 --apiserver-advertise-address "${PUBLIC_IP}" --apiserver-cert-extra-sans "${PUBLIC_IP}" "${PRIVATE_IP}"
+
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
+#calico
+kubectl apply -f https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+
+#dashboard
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml

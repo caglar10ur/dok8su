@@ -1,0 +1,29 @@
+#!/bin/bash
+
+if [ ! -f ~/.ssh/k8s/id_rsa ]; then
+    SSH_ID=$(doctl compute ssh-key list | grep "k8s-ssh" | cut -d' ' -f1)
+    if [ -n "${SSH_ID}" ]; then
+        SSH_KEY=$(doctl compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
+    fi
+    if [ -n "${SSH_KEY}" ]; then
+        doctl compute ssh-key delete "${SSH_KEY}" -f
+    fi
+fi
+
+echo "- Destroying the droplets"
+# delete the droplets
+doctl compute droplet delete master node1 node2 node3 -f
+
+echo "- Destroying the tags"
+# delete the tags
+doctl compute tag delete k8s-master -f
+doctl compute tag delete k8s-node -f
+
+echo "- Destroying the load balancer"
+# delete load balancer
+LB_ID=$(doctl compute load-balancer list | grep "k8s-node" | cut -d' ' -f1)
+if [ -n "${LB_ID}" ]; then
+    doctl compute load-balancer delete "${LB_ID}" -f
+fi
+
+echo "- Destroy completed"
