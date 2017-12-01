@@ -145,10 +145,25 @@ echo "- Creating the LoadBalancer"
 NODEPORT=$(kubectl -n sock-shop get svc -o go-template='{{range .items}}{{range.spec.ports}}{{if .nodePort}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 # create the load balancer for sock-shop
 doctl compute load-balancer create \
-	--name nodes \
+	--name k8s-nodes \
 	--tag-name k8s-node \
 	--region "${REGION}" \
 	--health-check protocol:http,port:"${NODEPORT}",path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
 	--forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:"${NODEPORT}"
+
+echo "- Creating the master firewall"
+doctl compute firewall create \
+    --name k8s-master \
+    --inbound-rules "protocol:tcp,ports:all,tag:k8s-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
+    --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
+    --tag-names k8s-master
+
+
+echo "- Creating the node firewall"
+doctl compute firewall create \
+    --name k8s-nodes \
+    --inbound-rules "protocol:tcp,ports:all,tag:k8s-master protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${NODEPORT},address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,tag:k8s-master" \
+    --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
+    --tag-names k8s-node
 
 echo "- Installation completed"

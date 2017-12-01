@@ -21,9 +21,21 @@ doctl compute tag delete k8s-node -f
 
 echo "- Destroying the load balancer"
 # delete load balancer
-LB_ID=$(doctl compute load-balancer list | grep "k8s-node" | cut -d' ' -f1)
+LB_ID=$(doctl compute load-balancer list | grep "k8s-nodes" | cut -d' ' -f1)
 if [ -n "${LB_ID}" ]; then
     doctl compute load-balancer delete "${LB_ID}" -f
+fi
+
+echo "- Destroying the node firewall"
+FW_ID=$(doctl compute firewall list | grep "k8s-nodes" | cut -d' ' -f1)
+if [ -n "${FW_ID}" ]; then
+    doctl compute firewall delete "${FW_ID}" -f
+fi
+
+echo "- Destroying the master firewall"
+FW_ID=$(doctl compute firewall list | grep "k8s-master" | cut -d' ' -f1)
+if [ -n "${FW_ID}" ]; then
+    doctl compute firewall delete "${FW_ID}" -f
 fi
 
 echo "- Destroy completed"
