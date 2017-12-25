@@ -2,6 +2,8 @@
 
 set -e
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # run 'doctl compute region list' for a list of available regions
 REGION=${REGION:-nyc3}
 
@@ -55,8 +57,8 @@ TOKEN16=$(env LC_CTYPE=C tr -dc 'a-z0-9' < /dev/urandom | fold -w "${1:-16}" | h
 TOKEN="${TOKEN6}"."${TOKEN16}"
 
 # update the master.sh/node.sh with TOKEN
-sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" templates/master.sh.template > "${TEMP_DIR}"/master.sh
-sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" templates/node.sh.template > "${TEMP_DIR}"/node.sh
+sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" "${DIR}"/templates/master.sh.template > "${TEMP_DIR}"/master.sh
+sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" "${DIR}"/templates/node.sh.template > "${TEMP_DIR}"/node.sh
 
 echo "- Creating the master"
 
