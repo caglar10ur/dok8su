@@ -10,14 +10,24 @@ if [ ! -f ~/.ssh/k8s/id_rsa ]; then
     fi
 fi
 
+# name of the master
+MASTER_NAME=${MASTER_NAME:-master}
+NODE_NAME=${NODE_NAME:-node}
+
+NODE_COUNT=${NODE_COUNT:-3}
+nodes=()
+for i in $(seq "${NODE_COUNT}"); do
+    nodes+=("${NODE_NAME}""$i")
+done
+
 echo "- Destroying the droplets"
 # delete the droplets
-doctl compute droplet delete master node1 node2 node3 -f
+doctl compute droplet delete -f "${MASTER_NAME}" "${nodes[@]}"
 
 echo "- Destroying the tags"
 # delete the tags
-doctl compute tag delete k8s-master -f
-doctl compute tag delete k8s-node -f
+doctl compute tag delete -f k8s-master
+doctl compute tag delete -f k8s-node
 
 echo "- Destroying the load balancer"
 # delete load balancer

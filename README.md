@@ -2,10 +2,11 @@
 
 (Yet another) Collection of bash scripts to create a [kubernetes](https://kubernetes.io/) cluster with 4 nodes using kubeadm.
 
-Master uses 2gb, nodes uses 4gb droplets. They are all based on the ubuntu 16.04 image.
+By default master uses 2gb, nodes uses 4gb droplets. They can be changed with MASTER_SIZE and NODE_SIZE env. variables. All droplets are based on the ubuntu 16.04 image.
 
-Uses [Project Calico v2.6](https://www.projectcalico.org/) for networking. Also installs [dashboard](https://github.com/kubernetes/dashboard/), [grafana/influxdb/heapster](https://github.com/kubernetes/heapster/) for monitoring.
-Deploys [Sock Shop](https://github.com/microservices-demo/microservices-demo) and exposes it using [DigitalOcean Load Balancer](https://www.digitalocean.com/products/load-balancer/).
+By default dok8s uses [Project Calico v2.6](https://www.projectcalico.org/) for networking. Also installs [dashboard](https://github.com/kubernetes/dashboard/), [grafana/influxdb/heapster](https://github.com/kubernetes/heapster/) for monitoring.
+
+For demo purposes it deploys [Sock Shop](https://github.com/microservices-demo/microservices-demo) and exposes it using [DigitalOcean Load Balancer](https://www.digitalocean.com/products/load-balancer/) and configures the [DigitalOcean Firewall](https://www.digitalocean.com/products/cloud-firewalls/)
 
 ## Requires
 
@@ -17,7 +18,7 @@ Deploys [Sock Shop](https://github.com/microservices-demo/microservices-demo) an
 To create a cluster:
 
 ```sh
-$ DIGITALOCEAN_ACCESS_TOKEN=XxX REGION=nyc3 ./dok8s-create
+$ DIGITALOCEAN_ACCESS_TOKEN=XxX REGION=nyc3 MASTER_NAME=master NODE_NAME=node NODE_COUNT=3 ./dok8s-create
 - Creating the master
 ID          Name      Public IPv4       Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region    Image                 Status    Tags    Features              Volumes
 12345567    master    1.2.3.4           10.10.10.10                    2048      2        40      nyc3      Ubuntu 16.04.3 x64    active            private_networking
@@ -57,7 +58,7 @@ and Grafana at:
 To destroy the cluster:
 
 ```sh
-$ DIGITALOCEAN_ACCESS_TOKEN=XxX ./dok8s-destroy
+$ DIGITALOCEAN_ACCESS_TOKEN=XxX MASTER_NAME=master NODE_NAME=node NODE_COUNT=3 ./dok8s-destroy
 - Destroying the droplets
 - Destroying the tags
 - Destroying the load balancer

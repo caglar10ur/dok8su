@@ -7,9 +7,15 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # run 'doctl compute region list' for a list of available regions
 REGION=${REGION:-nyc3}
 
+# name of the master
+MASTER_NAME=${MASTER_NAME:-master}
+NODE_NAME=${NODE_NAME:-node}
+
 # master/node sizes
 MASTER_SIZE=2gb
 NODE_SIZE=4gb
+
+NODE_COUNT=${NODE_COUNT:-3}
 
 command_exists () {
     type "$1" &> /dev/null;
@@ -18,7 +24,7 @@ command_exists () {
 TEMP_DIR=$(mktemp -d)
 # deletes the temp directory
 function cleanup {
-  rm -rf "$TEMP_DIR"
+    rm -rf "$TEMP_DIR"
 }
 # register the cleanup function to be called on the EXIT signal
 trap cleanup EXIT
@@ -60,10 +66,10 @@ TOKEN="${TOKEN6}"."${TOKEN16}"
 sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" "${DIR}"/templates/master.sh.template > "${TEMP_DIR}"/master.sh
 sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" "${DIR}"/templates/node.sh.template > "${TEMP_DIR}"/node.sh
 
-echo "- Creating the master"
+echo "- Creating the ${MASTER_NAME}"
 
 # create the master
-doctl compute droplet create master \
+doctl compute droplet create "${MASTER_NAME}" \
 	--region "${REGION}" \
 	--image ubuntu-16-04-x64 \
 	--size "${MASTER_SIZE}" \
@@ -74,7 +80,7 @@ doctl compute droplet create master \
 	--wait
 
 # get the public/private ips of the master
-MASTER_ID=$(doctl compute droplet list | grep "master" |cut -d' ' -f1)
+MASTER_ID=$(doctl compute droplet list | grep "${MASTER_NAME}" |cut -d' ' -f1)
 PUBLIC_IP=$(doctl compute droplet get "${MASTER_ID}" --format PublicIPv4 --no-header)
 PRIVATE_IP=$(doctl compute droplet get "${MASTER_ID}" --format PrivateIPv4 --no-header)
 
@@ -93,8 +99,13 @@ sed -i "" "s/^MASTER_IP=.*/MASTER_IP=${PRIVATE_IP}/" "${TEMP_DIR}"/node.sh
 
 echo "- Creating nodes"
 
+nodes=()
+for i in $(seq "${NODE_COUNT}"); do
+    nodes+=("${NODE_NAME}""$i")
+done
+
 # join the nodes to the cluster
-doctl compute droplet create node1 node2 node3 \
+doctl compute droplet create "${nodes[@]}" \
 	--region "${REGION}" \
 	--image ubuntu-16-04-x64 \
 	--size "${NODE_SIZE}" \
@@ -106,7 +117,7 @@ doctl compute droplet create node1 node2 node3 \
 
 echo "- Waiting nodes to be ready"
 # wait till nodes are ready
-until [ "$(kubectl get nodes 2> /dev/null| grep -v master | grep -c Ready | xargs)" == 3 ]
+until [ "$(kubectl get nodes 2> /dev/null| grep -v master | grep -c Ready | xargs)" == "${NODE_COUNT}" ]
 do
     sleep 10
 done
