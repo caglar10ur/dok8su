@@ -1,6 +1,6 @@
 # dok8s
 
-(Yet another) Collection of bash scripts to create a [kubernetes](https://kubernetes.io/) cluster with 4 nodes using kubeadm.
+(Yet another) Collection of bash scripts to create a [kubernetes](https://kubernetes.io/) cluster with multiple nodes using kubeadm.
 
 By default master uses 2gb, nodes uses 4gb droplets. They can be changed with MASTER_SIZE and NODE_SIZE env. variables. All droplets are based on the ubuntu 16.04 image.
 
