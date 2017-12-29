@@ -45,10 +45,10 @@ XXXXXXXXXXXXXXXX    k8s-nodes    waiting    2017-12-29T00:04:16Z    protocol:tcp
 $ export KUBECONFIG=admin.conf
 $ kubectl get nodes
 NAME      STATUS    ROLES     AGE       VERSION
-master    Ready     master    3m        v1.8.4
-node1     Ready     <none>    2m        v1.8.4
-node2     Ready     <none>    2m        v1.8.4
-node3     Ready     <none>    1m        v1.8.4
+master    Ready     master    3m        v1.9.0
+node1     Ready     <none>    2m        v1.9.0
+node2     Ready     <none>    2m        v1.9.0
+node3     Ready     <none>    1m        v1.9.0
 $ kubectl proxy
 Starting to serve on 127.0.0.1:8001
 ```
