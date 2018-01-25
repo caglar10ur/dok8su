@@ -70,14 +70,16 @@ echo "- Creating the ${MASTER_NAME}"
 
 # create the master
 doctl compute droplet create "${MASTER_NAME}" \
-	--region "${REGION}" \
-	--image ubuntu-16-04-x64 \
-	--size "${MASTER_SIZE}" \
-	--tag-name k8s-master \
-	--ssh-keys "${SSH_KEY}" \
+    --region "${REGION}" \
+    --image ubuntu-16-04-x64 \
+    --size "${MASTER_SIZE}" \
+    --tag-name k8s-master \
+    --ssh-keys "${SSH_KEY}" \
     --enable-private-networking \
-	--user-data-file "${TEMP_DIR}"/master.sh \
-	--wait
+    --enable-ipv6 \
+    --enable-monitoring \
+    --user-data-file "${TEMP_DIR}"/master.sh \
+    --wait
 
 # get the public/private ips of the master
 MASTER_ID=$(doctl compute droplet list | grep "${MASTER_NAME}" |cut -d' ' -f1)
@@ -106,14 +108,16 @@ done
 
 # join the nodes to the cluster
 doctl compute droplet create "${nodes[@]}" \
-	--region "${REGION}" \
-	--image ubuntu-16-04-x64 \
-	--size "${NODE_SIZE}" \
-	--tag-name k8s-node \
-	--ssh-keys "${SSH_KEY}" \
+    --region "${REGION}" \
+    --image ubuntu-16-04-x64 \
+    --size "${NODE_SIZE}" \
+    --tag-name k8s-node \
+    --ssh-keys "${SSH_KEY}" \
     --enable-private-networking \
-	--user-data-file "${TEMP_DIR}"/node.sh \
-	--wait
+    --enable-ipv6 \
+    --enable-monitoring \
+    --user-data-file "${TEMP_DIR}"/node.sh \
+    --wait
 
 echo "- Waiting nodes to be ready"
 # wait till nodes are ready
@@ -158,11 +162,11 @@ echo "- Creating the LoadBalancer"
 NODEPORT=$(kubectl -n sock-shop get svc -o go-template='{{range .items}}{{range.spec.ports}}{{if .nodePort}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 # create the load balancer for sock-shop
 doctl compute load-balancer create \
-	--name k8s-nodes \
-	--tag-name k8s-node \
-	--region "${REGION}" \
-	--health-check protocol:http,port:"${NODEPORT}",path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
-	--forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:"${NODEPORT}"
+    --name k8s-nodes \
+    --tag-name k8s-node \
+    --region "${REGION}" \
+    --health-check protocol:http,port:"${NODEPORT}",path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
+    --forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:"${NODEPORT}"
 
 echo "- Creating the master firewall"
 doctl compute firewall create \
