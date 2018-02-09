@@ -97,7 +97,7 @@ KUBECONFIG=$(pwd)/admin.conf
 export KUBECONFIG
 
 # update the node.sh with MASTER_IP
-sed -i "s/^MASTER_IP=.*/MASTER_IP=${PRIVATE_IP}/" "${TEMP_DIR}"/node.sh
+sed -i.bak "s/^MASTER_IP=.*/MASTER_IP=${PRIVATE_IP}/" "${TEMP_DIR}"/node.sh
 
 echo "- Creating nodes"
 
