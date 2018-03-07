@@ -31,13 +31,13 @@ trap cleanup EXIT
 
 # check doctl
 if ! command_exists doctl; then
-    echo "Please install doctl: brew install doctl"
+    echo "Please install doctl: https://github.com/digitalocean/doctl"
     exit 1
 fi
 
 # check kubectl
 if ! command_exists kubectl; then
-    echo "Please install doctl: brew install kubectl"
+    echo "Please install kubectl: https://kubernetes.io/docs/tasks/tools/install-kubectl/"
     exit 1
 fi
 
