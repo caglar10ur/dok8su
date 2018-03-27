@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Specify the Kubernetes version to use.
+KUBERNETES_VERSION="1.9.6"
+KUBERNETES_CNI="0.6.0"
+
 TOKEN=TOKEN
 
 # k8s apt repo
@@ -20,7 +24,10 @@ EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get -yq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
-apt-get install -y docker-ce kubelet kubeadm kubectl kubernetes-cni
+apt-get install -y docker-ce \
+    kubelet=${KUBERNETES_VERSION}-00 \
+    kubeadm=${KUBERNETES_VERSION}-00 \
+    kubernetes-cni=${KUBERNETES_CNI}-00
 
 PUBLIC_IP=$(curl -s http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
 PRIVATE_IP=$(curl -s http://169.254.169.254/metadata/v1/interfaces/private/0/ipv4/address)
@@ -28,7 +35,7 @@ PRIVATE_IP=$(curl -s http://169.254.169.254/metadata/v1/interfaces/private/0/ipv
 kubeadm init --skip-preflight-checks --pod-network-cidr=192.168.0.0/16 --token "${TOKEN}" --apiserver-bind-port 443 --apiserver-advertise-address "${PUBLIC_IP}" --apiserver-cert-extra-sans "${PUBLIC_IP}" "${PRIVATE_IP}"
 
 #calico
-kubectl apply -f https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml --kubeconfig /etc/kubernetes/admin.conf
+kubectl apply -f https://docs.projectcalico.org/v3.0/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml --kubeconfig /etc/kubernetes/admin.conf
 
 #dashboard
 kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml --kubeconfig /etc/kubernetes/admin.conf

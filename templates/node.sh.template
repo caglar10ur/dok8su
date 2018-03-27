@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Specify the Kubernetes version to use.
+KUBERNETES_VERSION="1.9.6"
+KUBERNETES_CNI="0.6.0"
+
 TOKEN=TOKEN
 MASTER_IP=MASTER_IP
 
@@ -21,6 +25,9 @@ EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get -yq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
-apt-get install -y docker-ce kubelet kubeadm kubectl kubernetes-cni
+apt-get install -y docker-ce \
+    kubelet=${KUBERNETES_VERSION}-00 \
+    kubeadm=${KUBERNETES_VERSION}-00 \
+    kubernetes-cni=${KUBERNETES_CNI}-00
 
 kubeadm join --token "$TOKEN" "$MASTER_IP":443 --skip-preflight-checks --discovery-token-unsafe-skip-ca-verification

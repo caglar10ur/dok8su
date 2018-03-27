@@ -12,8 +12,8 @@ MASTER_NAME=${MASTER_NAME:-master}
 NODE_NAME=${NODE_NAME:-node}
 
 # master/node sizes
-MASTER_SIZE=2gb
-NODE_SIZE=4gb
+MASTER_SIZE=s-2vcpu-2gb
+NODE_SIZE=s-2vcpu-4gb
 
 NODE_COUNT=${NODE_COUNT:-3}
 

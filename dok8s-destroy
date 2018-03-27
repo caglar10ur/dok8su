@@ -15,14 +15,20 @@ MASTER_NAME=${MASTER_NAME:-master}
 NODE_NAME=${NODE_NAME:-node}
 
 NODE_COUNT=${NODE_COUNT:-3}
-nodes=()
-for i in $(seq "${NODE_COUNT}"); do
-    nodes+=("${NODE_NAME}""$i")
-done
 
 echo "- Destroying the droplets"
 # delete the droplets
-doctl compute droplet delete -f "${MASTER_NAME}" "${nodes[@]}"
+MASTER_ID=$(doctl compute droplet list | grep "${MASTER_NAME}" |cut -d' ' -f1)
+if [ -n "${MASTER_ID}" ]; then
+    doctl compute droplet delete -f "${MASTER_ID}"
+fi
+
+for i in $(seq "${NODE_COUNT}"); do
+    NODE_ID=$(doctl compute droplet list | grep "${NODE_NAME}""$i" |cut -d' ' -f1)
+    if [ -n "${NODE_ID}" ]; then
+        doctl compute droplet delete -f "${NODE_ID}"
+    fi
+done
 
 echo "- Destroying the tags"
 # delete the tags
