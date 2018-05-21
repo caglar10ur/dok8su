@@ -4,7 +4,7 @@
 
 By default master uses 2gb, nodes use 4gb droplets. They can be changed with MASTER_SIZE and NODE_SIZE env. variables. All droplets are based on the ubuntu 16.04 image.
 
-By default dok8s uses [Project Calico v2.6](https://www.projectcalico.org/) for networking. Also installs [dashboard](https://github.com/kubernetes/dashboard/), [grafana/influxdb/heapster](https://github.com/kubernetes/heapster/) for monitoring.
+By default dok8s uses [Project Calico v3.0](https://www.projectcalico.org/) for networking. Also installs [dashboard](https://github.com/kubernetes/dashboard/), [grafana/influxdb/heapster](https://github.com/kubernetes/heapster/) for monitoring.
 
 For demo purposes it deploys [Sock Shop](https://github.com/microservices-demo/microservices-demo) and exposes it using [DigitalOcean Load Balancer](https://www.digitalocean.com/products/load-balancer/) and configures the [DigitalOcean Firewall](https://www.digitalocean.com/products/cloud-firewalls/)
 
