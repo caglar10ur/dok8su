@@ -126,12 +126,18 @@ do
     sleep 10
 done
 
-echo "- Creating grafana/influxdb/heapster"
-# deploy grafana/influxdb/heapster
-kubectl create -f https://raw.githubusercontent.com/kubernetes/heapster/master/deploy/kube-config/influxdb/grafana.yaml > /dev/null 2>&1
-kubectl create -f https://raw.githubusercontent.com/kubernetes/heapster/master/deploy/kube-config/influxdb/influxdb.yaml > /dev/null 2>&1
-kubectl create -f https://raw.githubusercontent.com/kubernetes/heapster/master/deploy/kube-config/influxdb/heapster.yaml > /dev/null 2>&1
-kubectl create -f https://raw.githubusercontent.com/kubernetes/heapster/master/deploy/kube-config/rbac/heapster-rbac.yaml > /dev/null 2>&1
+kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/auth-delegator.yaml > /dev/null 2>&1
+kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/auth-reader.yaml > /dev/null 2>&1
+kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/metrics-apiservice.yaml > /dev/null 2>&1
+kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/metrics-server-deployment.yaml > /dev/null 2>&1
+kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/metrics-server-service.yaml > /dev/null 2>&1
+kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/resource-reader.yaml > /dev/null 2>&1
+
+kubectl create namespace monitoring
+kubectl create -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/clusterRole.yaml
+kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/config-map.yaml
+kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/prometheus-deployment.yaml
+kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/prometheus-service.yaml
 
 # set dashboard access to admin
 cat <<EOF | kubectl create -f - > /dev/null 2>&1
@@ -158,15 +164,24 @@ kubectl create namespace sock-shop > /dev/null 2>&1
 kubectl create -n sock-shop -f https://raw.githubusercontent.com/microservices-demo/microservices-demo/master/deploy/kubernetes/complete-demo.yaml > /dev/null 2>&1
 
 echo "- Creating the LoadBalancer"
-# find the frontend's NodePort
-NODEPORT=$(kubectl -n sock-shop get svc -o go-template='{{range .items}}{{range.spec.ports}}{{if .nodePort}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
+
+SOCKPORT=$(kubectl -n sock-shop get svc -o go-template='{{range .items}}{{range.spec.ports}}{{if .nodePort}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 # create the load balancer for sock-shop
 doctl compute load-balancer create \
-    --name k8s-nodes \
+    --name k8s-sock-shop \
     --tag-name k8s-node \
     --region "${REGION}" \
-    --health-check protocol:http,port:"${NODEPORT}",path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
-    --forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:"${NODEPORT}"
+    --health-check protocol:http,port:"${SOCKPORT}",path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
+    --forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:"${SOCKPORT}"
+
+PROMPORT=$(kubectl -n monitoring get svc -o go-template='{{range .items}}{{range.spec.ports}}{{if .nodePort}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
+# create the load balancer for prom
+doctl compute load-balancer create \
+    --name k8s-monitoring \
+    --tag-name k8s-node \
+    --region "${REGION}" \
+    --health-check protocol:http,port:"${PROMPORT}",path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
+    --forwarding-rules entry_protocol:TCP,entry_port:${PROMPORT},target_protocol:TCP,target_port:"${PROMPORT}"
 
 echo "- Creating the master firewall"
 doctl compute firewall create \
@@ -179,7 +194,7 @@ doctl compute firewall create \
 echo "- Creating the node firewall"
 doctl compute firewall create \
     --name k8s-nodes \
-    --inbound-rules "protocol:tcp,ports:all,tag:k8s-master protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${NODEPORT},address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,tag:k8s-master" \
+    --inbound-rules "protocol:tcp,ports:all,tag:k8s-master protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${SOCKPORT},address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,tag:k8s-master" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names k8s-node
 
