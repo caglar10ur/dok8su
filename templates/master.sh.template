@@ -29,13 +29,51 @@ apt-get install -y docker-ce \
     kubeadm=${KUBERNETES_VERSION}-00 \
     kubernetes-cni=${KUBERNETES_CNI}-00
 
+HOSTNAME=$(curl -s http://169.254.169.254/metadata/v1/hostname)
 PUBLIC_IP=$(curl -s http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
 PRIVATE_IP=$(curl -s http://169.254.169.254/metadata/v1/interfaces/private/0/ipv4/address)
 
-kubeadm init --skip-preflight-checks --pod-network-cidr=192.168.0.0/16 --token "${TOKEN}" --apiserver-bind-port 443 --apiserver-advertise-address "${PUBLIC_IP}" --apiserver-cert-extra-sans "${PUBLIC_IP}" "${PRIVATE_IP}"
+# Enable and start Docker.
+systemctl enable docker
+systemctl start docker
+
+# Specify node IP for kubelet.
+echo "Environment=\"KUBELET_EXTRA_ARGS=--node-ip=${PUBLIC_IP}\"" >> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+systemctl daemon-reload
+systemctl restart kubelet
+
+cat << EOF  > "/etc/kubeadm.config.yaml"
+kind: MasterConfiguration
+apiVersion: kubeadm.k8s.io/v1alpha1
+token: ${TOKEN}
+kubernetesVersion: ${KUBERNETES_VERSION}
+nodeName: ${HOSTNAME}
+api:
+  advertiseAddress: ${PUBLIC_IP}
+  bindPort: 443
+apiServerCertSANs:
+- ${PUBLIC_IP}
+- ${PRIVATE_IP}
+- ${HOSTNAME}
+authorizationModes:
+- Node
+- RBAC
+controllerManagerExtraArgs:
+  horizontal-pod-autoscaler-use-rest-clients: "true"
+  horizontal-pod-autoscaler-sync-period: "10s"
+  node-monitor-grace-period: "10s"
+apiServerExtraArgs:
+  runtime-config: "api/all=true"
+networking:
+  podSubnet: 192.168.0.0/16
+EOF
+
+# Initialize cluster.
+kubeadm reset
+kubeadm init --config /etc/kubeadm.config.yaml
 
 #calico
-kubectl apply -f https://docs.projectcalico.org/v3.0/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml --kubeconfig /etc/kubernetes/admin.conf
+kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml --kubeconfig /etc/kubernetes/admin.conf
 
 #dashboard
 kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml --kubeconfig /etc/kubernetes/admin.conf
