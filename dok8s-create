@@ -133,7 +133,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics
 kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/metrics-server-service.yaml > /dev/null 2>&1
 kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/resource-reader.yaml > /dev/null 2>&1
 
-kubectl create namespace monitoring
+kubectl create namespace monitoring > /dev/null 2>&1
 kubectl create -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/clusterRole.yaml > /dev/null 2>&1
 kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/config-map.yaml > /dev/null 2>&1
 kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/prometheus-deployment.yaml > /dev/null 2>&1
