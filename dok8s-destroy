@@ -36,12 +36,6 @@ doctl compute tag delete -f k8s-master
 doctl compute tag delete -f k8s-node
 
 echo "- Destroying the load balancer"
-# delete load balancer
-LB_ID=$(doctl compute load-balancer list | grep "k8s-sock-shop" | cut -d' ' -f1)
-if [ -n "${LB_ID}" ]; then
-    doctl compute load-balancer delete "${LB_ID}" -f
-fi
-
 LB_ID=$(doctl compute load-balancer list | grep "k8s-monitoring" | cut -d' ' -f1)
 if [ -n "${LB_ID}" ]; then
     doctl compute load-balancer delete "${LB_ID}" -f

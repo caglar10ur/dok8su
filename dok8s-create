@@ -79,7 +79,7 @@ doctl compute droplet create "${MASTER_NAME}" \
     --enable-ipv6 \
     --enable-monitoring \
     --user-data-file "${TEMP_DIR}"/master.sh \
-    --wait
+    --wait > /dev/null 2>&1
 
 # get the public/private ips of the master
 MASTER_ID=$(doctl compute droplet list | grep "${MASTER_NAME}" |cut -d' ' -f1)
@@ -117,11 +117,11 @@ doctl compute droplet create "${nodes[@]}" \
     --enable-ipv6 \
     --enable-monitoring \
     --user-data-file "${TEMP_DIR}"/node.sh \
-    --wait
+    --wait > /dev/null 2>&1
 
 echo "- Waiting nodes to be ready"
 # wait till nodes are ready
-until [ "$(kubectl get nodes 2> /dev/null| grep -v master | grep -c Ready | xargs)" == "${NODE_COUNT}" ]
+until [ "$(kubectl get nodes 2> /dev/null | grep -v master | grep -c Ready | xargs)" == "${NODE_COUNT}" ]
 do
     sleep 10
 done
@@ -134,10 +134,10 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics
 kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/resource-reader.yaml > /dev/null 2>&1
 
 kubectl create namespace monitoring
-kubectl create -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/clusterRole.yaml
-kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/config-map.yaml
-kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/prometheus-deployment.yaml
-kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/prometheus-service.yaml
+kubectl create -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/clusterRole.yaml > /dev/null 2>&1
+kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/config-map.yaml > /dev/null 2>&1
+kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/prometheus-deployment.yaml > /dev/null 2>&1
+kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/prometheus-service.yaml > /dev/null 2>&1
 
 # set dashboard access to admin
 cat <<EOF | kubectl create -f - > /dev/null 2>&1
@@ -157,22 +157,7 @@ subjects:
   namespace: kube-system
 EOF
 
-echo "- Creating sock shop app"
-
-# deploy the sock-shop
-kubectl create namespace sock-shop > /dev/null 2>&1
-kubectl create -n sock-shop -f https://raw.githubusercontent.com/microservices-demo/microservices-demo/master/deploy/kubernetes/complete-demo.yaml > /dev/null 2>&1
-
 echo "- Creating the LoadBalancer"
-
-SOCKPORT=$(kubectl -n sock-shop get svc -o go-template='{{range .items}}{{range.spec.ports}}{{if .nodePort}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
-# create the load balancer for sock-shop
-doctl compute load-balancer create \
-    --name k8s-sock-shop \
-    --tag-name k8s-node \
-    --region "${REGION}" \
-    --health-check protocol:http,port:"${SOCKPORT}",path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
-    --forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:"${SOCKPORT}"
 
 PROMPORT=$(kubectl -n monitoring get svc -o go-template='{{range .items}}{{range.spec.ports}}{{if .nodePort}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 # create the load balancer for prom
@@ -181,21 +166,21 @@ doctl compute load-balancer create \
     --tag-name k8s-node \
     --region "${REGION}" \
     --health-check protocol:http,port:"${PROMPORT}",path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
-    --forwarding-rules entry_protocol:TCP,entry_port:${PROMPORT},target_protocol:TCP,target_port:"${PROMPORT}"
+    --forwarding-rules entry_protocol:TCP,entry_port:${PROMPORT},target_protocol:TCP,target_port:"${PROMPORT}" > /dev/null 2>&1
 
 echo "- Creating the master firewall"
 doctl compute firewall create \
     --name k8s-master \
     --inbound-rules "protocol:tcp,ports:all,tag:k8s-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
-    --tag-names k8s-master
+    --tag-names k8s-master > /dev/null 2>&1
 
 
 echo "- Creating the node firewall"
 doctl compute firewall create \
     --name k8s-nodes \
-    --inbound-rules "protocol:tcp,ports:all,tag:k8s-master protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${SOCKPORT},address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,tag:k8s-master" \
+    --inbound-rules "protocol:tcp,ports:all,tag:k8s-master protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,tag:k8s-master" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
-    --tag-names k8s-node
+    --tag-names k8s-node > /dev/null 2>&1
 
 echo "- Installation completed"
