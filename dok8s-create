@@ -181,7 +181,7 @@ doctl compute firewall create \
 echo "- Creating the node firewall"
 doctl compute firewall create \
     --name k8s-nodes \
-    --inbound-rules "protocol:tcp,ports:all,tag:k8s-master protocol:udp,ports:all,tag:k8s-master protocol:tcp,ports:all,tag:k8s-node  protocol:udp,ports:all,tag:k8s-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},address:0.0.0.0/0,address:::/0" \
+    --inbound-rules "protocol:tcp,ports:all,tag:k8s-master protocol:udp,ports:all,tag:k8s-master protocol:tcp,ports:all,tag:k8s-node protocol:udp,ports:all,tag:k8s-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names k8s-node > /dev/null 2>&1
 
