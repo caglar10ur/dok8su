@@ -38,7 +38,7 @@ systemctl enable docker
 systemctl start docker
 
 # Specify node IP for kubelet.
-echo "Environment=\"KUBELET_EXTRA_ARGS=--node-ip=${PUBLIC_IP}\"" >> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+echo "Environment=\"KUBELET_EXTRA_ARGS=--node-ip=${PRIVATE_IP}\"" >> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 systemctl daemon-reload
 systemctl restart kubelet
 
@@ -65,18 +65,17 @@ controllerManagerExtraArgs:
 apiServerExtraArgs:
   runtime-config: "api/all=true"
 networking:
-  podSubnet: 192.168.0.0/16
+  podSubnet: 10.244.0.0/16
 EOF
 
 # Initialize cluster.
 kubeadm reset
 kubeadm init --config /etc/kubeadm.config.yaml
 
-#calico
-kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml --kubeconfig /etc/kubernetes/admin.conf
-kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml --kubeconfig /etc/kubernetes/admin.conf
+# flannel
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml --kubeconfig /etc/kubernetes/admin.conf
 
-#dashboard
+# dashboard
 kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml --kubeconfig /etc/kubernetes/admin.conf
 
 # setup for root user

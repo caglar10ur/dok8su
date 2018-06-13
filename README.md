@@ -4,7 +4,7 @@
 
 By default master uses 2gb, nodes use 4gb droplets. They can be changed with MASTER_SIZE and NODE_SIZE env. variables. All droplets are based on the ubuntu 16.04 image.
 
-By default dok8s uses [Project Calico v3.0](https://www.projectcalico.org/) for networking. Also installs [dashboard](https://github.com/kubernetes/dashboard/), [Prometheus](https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/) for monitoring. It uses [DigitalOcean Load Balancer](https://www.digitalocean.com/products/load-balancer/) and configures the [DigitalOcean Firewall](https://www.digitalocean.com/products/cloud-firewalls/)
+By default dok8s uses [Flannel](https://coreos.com/flannel/docs/latest/kubernetes.html) for networking. Also installs [dashboard](https://github.com/kubernetes/dashboard/), [Prometheus](https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/) for monitoring. It uses [DigitalOcean Load Balancer](https://www.digitalocean.com/products/load-balancer/) and configures the [DigitalOcean Firewall](https://www.digitalocean.com/products/cloud-firewalls/)
 
 ## Requires
 

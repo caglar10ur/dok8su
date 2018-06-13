@@ -173,7 +173,7 @@ doctl compute load-balancer create \
 echo "- Creating the master firewall"
 doctl compute firewall create \
     --name k8s-master \
-    --inbound-rules "protocol:tcp,ports:all,tag:k8s-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
+    --inbound-rules "protocol:tcp,ports:all,tag:k8s-node protocol:udp,ports:all,tag:k8s-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names k8s-master > /dev/null 2>&1
 
