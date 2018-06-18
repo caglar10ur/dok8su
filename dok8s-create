@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -126,20 +127,17 @@ do
     sleep 10
 done
 
-kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/auth-delegator.yaml > /dev/null 2>&1
-kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/auth-reader.yaml > /dev/null 2>&1
-kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/metrics-apiservice.yaml > /dev/null 2>&1
-kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/metrics-server-deployment.yaml > /dev/null 2>&1
-kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/metrics-server-service.yaml > /dev/null 2>&1
-kubectl create -f https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/resource-reader.yaml > /dev/null 2>&1
+kubectl create -f manifests/metrics-server > /dev/null 2>&1
 
 kubectl create namespace monitoring > /dev/null 2>&1
-kubectl create -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/clusterRole.yaml > /dev/null 2>&1
-kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/config-map.yaml > /dev/null 2>&1
-kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/prometheus-deployment.yaml > /dev/null 2>&1
-kubectl create -n monitoring -f https://raw.githubusercontent.com/bibinwilson/kubernetes-prometheus/master/prometheus-service.yaml > /dev/null 2>&1
+kubectl create -n monitoring -f manifests/prometheus > /dev/null 2>&1
+kubectl create -n monitoring -f manifests/node-exporter > /dev/null 2>&1
+kubectl create -n monitoring -f manifests/grafana/ > /dev/null 2>&1
 
-kubectl create -n monitoring -f https://raw.githubusercontent.com/caglar10ur/dok8s/master/manifests/node-exporter/node-exporter.yaml > /dev/null 2>&1
+kubectl create namespace custom-metrics > /dev/null 2>&1
+openssl req -x509 -sha256 -new -nodes -days 365 -newkey rsa:2048 -keyout serving.key -out serving.crt -subj "/CN=ca" > /dev/null 2>&1
+kubectl create -n custom-metrics secret tls cm-adapter-serving-certs --cert=./serving.crt --key=./serving.key > /dev/null 2>&1
+kubectl create -f manifests/custom-metrics-apiserver > /dev/null 2>&1
 
 # set dashboard access to admin
 cat <<EOF | kubectl create -f - > /dev/null 2>&1

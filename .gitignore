@@ -1,2 +1,4 @@
 .env
 admin.conf
+serving.crt
+serving.key
