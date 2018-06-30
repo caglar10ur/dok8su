@@ -168,8 +168,8 @@ doctl -u ${API_ENDPOINT} compute load-balancer create \
     --name k8s-monitoring \
     --tag-name k8s-node \
     --region "${REGION}" \
-    --health-check protocol:http,port:"${PROMPORT}",path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
-    --forwarding-rules entry_protocol:TCP,entry_port:${PROMPORT},target_protocol:TCP,target_port:"${PROMPORT}" > /dev/null 2>&1
+    --health-check protocol:http,port:"${PROMPORT}",path:/graph,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
+    --forwarding-rules entry_protocol:http,entry_port:${PROMPORT},target_protocol:http,target_port:"${PROMPORT}" > /dev/null 2>&1
 
 echo "- Creating the master firewall"
 doctl -u ${API_ENDPOINT} compute firewall create \
