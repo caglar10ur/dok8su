@@ -12,7 +12,7 @@ spec:
     spec:
       containers:
         - name: prometheus
-          image: prom/prometheus:v2.2.1
+          image: prom/prometheus:v2.3.1
           args:
             - "--config.file=/etc/prometheus/prometheus.yml"
             - "--storage.tsdb.path=/prometheus/"
@@ -28,6 +28,6 @@ spec:
           configMap:
             defaultMode: 420
             name: prometheus-server-conf
-  
+
         - name: prometheus-storage-volume
           emptyDir: {}
