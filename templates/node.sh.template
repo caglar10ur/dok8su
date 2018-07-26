@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Specify the Kubernetes version to use.
-KUBERNETES_VERSION="1.11.0"
+KUBERNETES_VERSION="1.11.1"
 KUBERNETES_CNI="0.6.0"
 
 TOKEN=TOKEN
