@@ -49,15 +49,15 @@ if [ ! -f ~/.ssh/k8s/id_rsa ]; then
     ssh-keygen -t rsa -b 4096 -C "k8s" -f ~/.ssh/k8s/id_rsa -N '' > /dev/null
 
     # import the new ssh key
-    doctl -u ${API_ENDPOINT} compute ssh-key import k8s-ssh --public-key-file ~/.ssh/k8s/id_rsa.pub
+    doctl -u "${API_ENDPOINT}" compute ssh-key import k8s-ssh --public-key-file ~/.ssh/k8s/id_rsa.pub
 fi
 
-SSH_ID=$(doctl -u ${API_ENDPOINT} compute ssh-key list | grep "k8s-ssh" | cut -d' ' -f1)
-SSH_KEY=$(doctl -u ${API_ENDPOINT} compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
+SSH_ID=$(doctl -u "${API_ENDPOINT}" compute ssh-key list | grep "k8s-ssh" | cut -d' ' -f1)
+SSH_KEY=$(doctl -u "${API_ENDPOINT}" compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
 
 # create tags
-doctl -u ${API_ENDPOINT} compute tag create k8s-master > /dev/null
-doctl -u ${API_ENDPOINT} compute tag create k8s-node > /dev/null
+doctl -u "${API_ENDPOINT}" compute tag create k8s-master > /dev/null
+doctl -u "${API_ENDPOINT}" compute tag create k8s-node > /dev/null
 
 # Generate token and insert into the script files
 TOKEN6=$(env LC_CTYPE=C tr -dc 'a-z0-9' < /dev/urandom | fold -w "${1:-6}" | head -n 1)
@@ -71,7 +71,7 @@ sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" "${DIR}"/templates/node.sh.template > "${TE
 echo "- Creating the ${MASTER_NAME}"
 
 # create the master
-doctl -u ${API_ENDPOINT} compute droplet create "${MASTER_NAME}" \
+doctl -u "${API_ENDPOINT}" compute droplet create "${MASTER_NAME}" \
     --region "${REGION}" \
     --image ubuntu-16-04-x64 \
     --size "${MASTER_SIZE}" \
@@ -84,9 +84,9 @@ doctl -u ${API_ENDPOINT} compute droplet create "${MASTER_NAME}" \
     --wait > /dev/null 2>&1
 
 # get the public/private ips of the master
-MASTER_ID=$(doctl -u ${API_ENDPOINT} compute droplet list | grep "${MASTER_NAME}" |cut -d' ' -f1)
-PUBLIC_IP=$(doctl -u ${API_ENDPOINT} compute droplet get "${MASTER_ID}" --format PublicIPv4 --no-header)
-PRIVATE_IP=$(doctl -u ${API_ENDPOINT} compute droplet get "${MASTER_ID}" --format PrivateIPv4 --no-header)
+MASTER_ID=$(doctl -u "${API_ENDPOINT}" compute droplet list | grep "${MASTER_NAME}" |cut -d' ' -f1)
+PUBLIC_IP=$(doctl -u "${API_ENDPOINT}" compute droplet get "${MASTER_ID}" --format PublicIPv4 --no-header)
+PRIVATE_IP=$(doctl -u "${API_ENDPOINT}" compute droplet get "${MASTER_ID}" --format PrivateIPv4 --no-header)
 
 echo "- Waiting master to finish installation"
 
@@ -109,7 +109,7 @@ for i in $(seq "${NODE_COUNT}"); do
 done
 
 # join the nodes to the cluster
-doctl -u ${API_ENDPOINT} compute droplet create "${nodes[@]}" \
+doctl -u "${API_ENDPOINT}" compute droplet create "${nodes[@]}" \
     --region "${REGION}" \
     --image ubuntu-16-04-x64 \
     --size "${NODE_SIZE}" \
@@ -164,15 +164,15 @@ GRAFPORT=$(kubectl -n monitoring get svc -o 'go-template={{range .items}}{{range
 echo "- Creating the LoadBalancer"
 
 # create the load balancer for prom
-doctl -u ${API_ENDPOINT} compute load-balancer create \
+doctl -u "${API_ENDPOINT}" compute load-balancer create \
     --name k8s-monitoring \
     --tag-name k8s-node \
     --region "${REGION}" \
     --health-check protocol:http,port:"${PROMPORT}",path:/graph,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
-    --forwarding-rules entry_protocol:http,entry_port:${PROMPORT},target_protocol:http,target_port:"${PROMPORT}" > /dev/null 2>&1
+    --forwarding-rules entry_protocol:http,entry_port:"${PROMPORT}",target_protocol:http,target_port:"${PROMPORT}" > /dev/null 2>&1
 
 echo "- Creating the master firewall"
-doctl -u ${API_ENDPOINT} compute firewall create \
+doctl -u "${API_ENDPOINT}" compute firewall create \
     --name k8s-master \
     --inbound-rules "protocol:tcp,ports:all,tag:k8s-node protocol:udp,ports:all,tag:k8s-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
@@ -180,7 +180,7 @@ doctl -u ${API_ENDPOINT} compute firewall create \
 
 
 echo "- Creating the node firewall"
-doctl -u ${API_ENDPOINT} compute firewall create \
+doctl -u "${API_ENDPOINT}" compute firewall create \
     --name k8s-nodes \
     --inbound-rules "protocol:tcp,ports:all,tag:k8s-master protocol:udp,ports:all,tag:k8s-master protocol:tcp,ports:all,tag:k8s-node protocol:udp,ports:all,tag:k8s-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${GRAFPORT},address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \

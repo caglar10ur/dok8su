@@ -2,12 +2,12 @@
 
 
 if [ ! -f ~/.ssh/k8s/id_rsa ]; then
-    SSH_ID=$(doctl -u ${API_ENDPOINT} compute ssh-key list | grep "k8s-ssh" | cut -d' ' -f1)
+    SSH_ID=$(doctl -u "${API_ENDPOINT}" compute ssh-key list | grep "k8s-ssh" | cut -d' ' -f1)
     if [ -n "${SSH_ID}" ]; then
-        SSH_KEY=$(doctl -u ${API_ENDPOINT} compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
+        SSH_KEY=$(doctl -u "${API_ENDPOINT}" compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
     fi
     if [ -n "${SSH_KEY}" ]; then
-        doctl -u ${API_ENDPOINT} compute ssh-key delete "${SSH_KEY}" -f
+        doctl -u "${API_ENDPOINT}" compute ssh-key delete "${SSH_KEY}" -f
     fi
 fi
 
@@ -21,39 +21,39 @@ API_ENDPOINT=${API_ENDPOINT:-https://api.digitalocean.com/}
 
 echo "- Destroying the droplets"
 # delete the droplets
-MASTER_ID=$(doctl -u ${API_ENDPOINT} compute droplet list | grep "${MASTER_NAME}" |cut -d' ' -f1)
+MASTER_ID=$(doctl -u "${API_ENDPOINT}" compute droplet list | grep "${MASTER_NAME}" |cut -d' ' -f1)
 if [ -n "${MASTER_ID}" ]; then
-    doctl -u ${API_ENDPOINT} compute droplet delete -f "${MASTER_ID}"
+    doctl -u "${API_ENDPOINT}" compute droplet delete -f "${MASTER_ID}"
 fi
 
 for i in $(seq "${NODE_COUNT}"); do
-    NODE_ID=$(doctl -u ${API_ENDPOINT} compute droplet list | grep "${NODE_NAME}""$i" |cut -d' ' -f1)
+    NODE_ID=$(doctl -u "${API_ENDPOINT}" compute droplet list | grep "${NODE_NAME}""$i" |cut -d' ' -f1)
     if [ -n "${NODE_ID}" ]; then
-        doctl -u ${API_ENDPOINT} compute droplet delete -f "${NODE_ID}"
+        doctl -u "${API_ENDPOINT}" compute droplet delete -f "${NODE_ID}"
     fi
 done
 
 echo "- Destroying the tags"
 # delete the tags
-doctl -u ${API_ENDPOINT} compute tag delete -f k8s-master
-doctl -u ${API_ENDPOINT} compute tag delete -f k8s-node
+doctl -u "${API_ENDPOINT}" compute tag delete -f k8s-master
+doctl -u "${API_ENDPOINT}" compute tag delete -f k8s-node
 
 echo "- Destroying the load balancer"
-LB_ID=$(doctl -u ${API_ENDPOINT} compute load-balancer list | grep "k8s-monitoring" | cut -d' ' -f1)
+LB_ID=$(doctl -u "${API_ENDPOINT}" compute load-balancer list | grep "k8s-monitoring" | cut -d' ' -f1)
 if [ -n "${LB_ID}" ]; then
-    doctl -u ${API_ENDPOINT} compute load-balancer delete "${LB_ID}" -f
+    doctl -u "${API_ENDPOINT}" compute load-balancer delete "${LB_ID}" -f
 fi
 
 echo "- Destroying the node firewall"
-FW_ID=$(doctl -u ${API_ENDPOINT} compute firewall list | grep "k8s-nodes" | cut -d' ' -f1)
+FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list | grep "k8s-nodes" | cut -d' ' -f1)
 if [ -n "${FW_ID}" ]; then
-    doctl -u ${API_ENDPOINT} compute firewall delete "${FW_ID}" -f
+    doctl -u "${API_ENDPOINT}" compute firewall delete "${FW_ID}" -f
 fi
 
 echo "- Destroying the master firewall"
-FW_ID=$(doctl -u ${API_ENDPOINT} compute firewall list | grep "k8s-master" | cut -d' ' -f1)
+FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list | grep "k8s-master" | cut -d' ' -f1)
 if [ -n "${FW_ID}" ]; then
-    doctl -u ${API_ENDPOINT} compute firewall delete "${FW_ID}" -f
+    doctl -u "${API_ENDPOINT}" compute firewall delete "${FW_ID}" -f
 fi
 
 echo "- Destroy completed"
