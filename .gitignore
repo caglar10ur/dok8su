@@ -1,4 +1,4 @@
-.env
+.envrc
 admin.conf
 serving.crt
 serving.key
