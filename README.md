@@ -46,7 +46,7 @@ Now access Dashboard at:
 To destroy the cluster:
 
 ```sh
-$ DIGITALOCEAN_ACCESS_TOKEN=XxX MASTER_NAME=master NODE_NAME=node NODE_COUNT=3 ./dok8s-destroy
+$ DIGITALOCEAN_ACCESS_TOKEN=XxX MASTER_NAME=master NODE_NAME=node ./dok8s-destroy
 - Destroying the droplets
 - Destroying the tags
 - Destroying the load balancer
