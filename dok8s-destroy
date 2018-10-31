@@ -15,23 +15,20 @@ fi
 MASTER_NAME=${MASTER_NAME:-master}
 NODE_NAME=${NODE_NAME:-node}
 
-NODE_COUNT=${NODE_COUNT:-3}
-
 API_ENDPOINT=${API_ENDPOINT:-https://api.digitalocean.com/}
 
 echo "- Destroying the droplets"
 # delete the droplets
-MASTER_ID=$(doctl -u "${API_ENDPOINT}" compute droplet list | grep "${MASTER_NAME}" |cut -d' ' -f1)
-if [ -n "${MASTER_ID}" ]; then
-    doctl -u "${API_ENDPOINT}" compute droplet delete -f "${MASTER_ID}"
-fi
-
-for i in $(seq "${NODE_COUNT}"); do
-    NODE_ID=$(doctl -u "${API_ENDPOINT}" compute droplet list | grep "${NODE_NAME}""$i" |cut -d' ' -f1)
-    if [ -n "${NODE_ID}" ]; then
-        doctl -u "${API_ENDPOINT}" compute droplet delete -f "${NODE_ID}"
+NODES=()
+for TAG in k8s-master k8s-node; do
+    DROPLET="$(doctl -u "${API_ENDPOINT}" compute droplet list --format=ID --tag-name=${TAG} --no-header)"
+    if [ "${DROPLET}" ]; then
+        NODES+=("${DROPLET}")
     fi
 done
+if [ ${#NODES[@]} -gt 0 ]; then
+    doctl -u "${API_ENDPOINT}" compute droplet delete -f ${NODES[@]}
+fi
 
 echo "- Destroying the tags"
 # delete the tags
