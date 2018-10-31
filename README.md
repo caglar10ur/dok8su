@@ -2,7 +2,7 @@
 
 (Yet another) Collection of scripts to create a [kubernetes](https://kubernetes.io/) cluster with multiple nodes using kubeadm from the latest stable version of kubernetes.
 
-By default master uses 2gb, nodes use 4gb droplets. They can be changed with MASTER_SIZE and NODE_SIZE env. variables. All droplets are based on the ubuntu 16.04 image. 
+By default master uses 2gb, nodes use 4gb droplets. They can be changed by setting the MASTER_SIZE and NODE_SIZE environment variables, respectively. All droplets are based on the ubuntu 16.04 image.
 
 dok8s uses [Flannel](https://coreos.com/flannel/docs/latest/kubernetes.html) for networking. It also installs [dashboard](https://github.com/kubernetes/dashboard/), [metrics server](https://github.com/kubernetes-incubator/metrics-server), [Prometheus](https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/) [with node_exported] and [Grafana](https://grafana.com/).
 
