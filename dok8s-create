@@ -65,7 +65,7 @@ TOKEN16=$(env LC_CTYPE=C tr -dc 'a-z0-9' < /dev/urandom | fold -w "${1:-16}" | h
 TOKEN="${TOKEN6}"."${TOKEN16}"
 
 # update the master.sh/node.sh with TOKEN
-sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" "${DIR}"/templates/master.sh.template > "${TEMP_DIR}"/master.sh
+sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/; s/^DIGITALOCEAN_ACCESS_TOKEN=.*/DIGITALOCEAN_ACCESS_TOKEN=${DIGITALOCEAN_ACCESS_TOKEN}/" "${DIR}"/templates/master.sh.template > "${TEMP_DIR}"/master.sh
 sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" "${DIR}"/templates/node.sh.template > "${TEMP_DIR}"/node.sh
 
 echo "- Creating the ${MASTER_NAME}"
@@ -135,11 +135,6 @@ kubectl create -n monitoring -f manifests/prometheus > /dev/null
 kubectl create -n monitoring -f manifests/node-exporter > /dev/null
 kubectl create -n monitoring -f manifests/grafana/ > /dev/null
 
-kubectl create namespace custom-metrics > /dev/null
-openssl req -x509 -sha256 -new -nodes -days 365 -newkey rsa:2048 -keyout serving.key -out serving.crt -subj "/CN=ca" > /dev/null
-kubectl create -n custom-metrics secret tls cm-adapter-serving-certs --cert=./serving.crt --key=./serving.key > /dev/null
-kubectl create -f manifests/custom-metrics-apiserver > /dev/null
-
 # set dashboard access to admin
 cat <<EOF | kubectl create -f - > /dev/null
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -160,16 +155,6 @@ EOF
 
 PROMPORT=$(kubectl -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 9090.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 GRAFPORT=$(kubectl -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 3000.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
-
-echo "- Creating the LoadBalancer"
-
-# create the load balancer for prom
-doctl -u "${API_ENDPOINT}" compute load-balancer create \
-    --name k8s-monitoring \
-    --tag-name k8s-node \
-    --region "${REGION}" \
-    --health-check protocol:http,port:"${PROMPORT}",path:/graph,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
-    --forwarding-rules entry_protocol:http,entry_port:"${PROMPORT}",target_protocol:http,target_port:"${PROMPORT}" > /dev/null
 
 echo "- Creating the master firewall"
 doctl -u "${API_ENDPOINT}" compute firewall create \

@@ -1,10 +1,12 @@
 #!/bin/bash
 
 # Specify the Kubernetes version to use.
-KUBERNETES_VERSION="1.11.3"
+KUBERNETES_VERSION="1.12.2"
 KUBERNETES_CNI="0.6.0"
+DOCKER_VERSION="18.06.0~ce~3-0~ubuntu"
 
 TOKEN=TOKEN
+DIGITALOCEAN_ACCESS_TOKEN=DIGITALOCEAN_ACCESS_TOKEN
 
 # k8s apt repo
 curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
@@ -24,7 +26,8 @@ EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get -yq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
-apt-get install -y docker-ce \
+apt-get install -y \
+    docker-ce=${DOCKER_VERSION} \
     kubelet=${KUBERNETES_VERSION}-00 \
     kubeadm=${KUBERNETES_VERSION}-00 \
     kubernetes-cni=${KUBERNETES_CNI}-00
@@ -38,42 +41,85 @@ systemctl enable docker
 systemctl start docker
 
 # Specify node IP for kubelet.
-echo "Environment=\"KUBELET_EXTRA_ARGS=--node-ip=${PRIVATE_IP}\"" >> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+echo "KUBELET_EXTRA_ARGS=--node-ip=${PRIVATE_IP} --cloud-provider=external" > /etc/default/kubelet
 systemctl daemon-reload
 systemctl restart kubelet
 
-cat << EOF  > "/etc/kubeadm.config.yaml"
-kind: MasterConfiguration
-apiVersion: kubeadm.k8s.io/v1alpha1
-token: ${TOKEN}
-kubernetesVersion: ${KUBERNETES_VERSION}
-nodeName: ${HOSTNAME}
-api:
+cat << EOF >  "/etc/kubeadm.config.yaml"
+apiEndpoint:
   advertiseAddress: ${PUBLIC_IP}
   bindPort: 443
+apiVersion: kubeadm.k8s.io/v1alpha3
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: ${TOKEN}
+  ttl: 24h0m0s
+  usages:
+  - signing
+  - authentication
+kind: InitConfiguration
+nodeRegistration:
+  criSocket: /var/run/dockershim.sock
+  name: ${HOSTNAME}
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+---
 apiServerCertSANs:
 - ${PUBLIC_IP}
 - ${PRIVATE_IP}
 - ${HOSTNAME}
+apiServerExtraArgs:
+  kubelet-preferred-address-types: InternalIP,ExternalIP,Hostname
 authorizationModes:
 - Node
 - RBAC
-controllerManagerExtraArgs:
-  horizontal-pod-autoscaler-use-rest-clients: "true"
-  horizontal-pod-autoscaler-sync-period: "10s"
-  node-monitor-grace-period: "10s"
 apiServerExtraArgs:
-  runtime-config: "api/all=true"
+  runtime-config: api/all=true
+apiVersion: kubeadm.k8s.io/v1alpha3
+auditPolicy:
+  logDir: /var/log/kubernetes/audit
+  logMaxAge: 2
+  path: ""
+certificatesDir: /etc/kubernetes/pki
+clusterName: dok8s
+controlPlaneEndpoint: ""
+controllerManagerExtraArgs:
+  horizontal-pod-autoscaler-sync-period: 10s
+  horizontal-pod-autoscaler-use-rest-clients: "true"
+  node-monitor-grace-period: 10s
+etcd:
+  local:
+    dataDir: /var/lib/etcd
+    image: ""
+imageRepository: k8s.gcr.io
+kind: ClusterConfiguration
+kubernetesVersion: v${KUBERNETES_VERSION}
 networking:
+  dnsDomain: cluster.local
   podSubnet: 10.244.0.0/16
+  serviceSubnet: 10.96.0.0/12
+unifiedControlPlaneImage: ""
 EOF
 
-# Initialize cluster.
-kubeadm reset
+# Initialize cluster
+kubeadm reset --force
 kubeadm init --config /etc/kubeadm.config.yaml
 
 # flannel
-kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.10.0/Documentation/kube-flannel.yml --kubeconfig /etc/kubernetes/admin.conf
+sysctl net.bridge.bridge-nf-call-iptables=1
+#kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml --kubeconfig /etc/kubernetes/admin.conf
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml --kubeconfig /etc/kubernetes/admin.conf
+
+# DO secret
+kubectl -n kube-system create secret generic digitalocean --from-literal=access-token=${DIGITALOCEAN_ACCESS_TOKEN} --kubeconfig /etc/kubernetes/admin.conf
+
+# DigitalOcean Cloud-Manager
+kubectl apply -f https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/master/releases/v0.1.8.yml --kubeconfig /etc/kubernetes/admin.conf
+
+# A Container Storage Interface (CSI) Driver for DigitalOcean Block Storage
+kubectl apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v0.3.1.yaml --kubeconfig /etc/kubernetes/admin.conf
 
 # dashboard
 kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml --kubeconfig /etc/kubernetes/admin.conf

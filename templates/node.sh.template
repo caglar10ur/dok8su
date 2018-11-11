@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Specify the Kubernetes version to use.
-KUBERNETES_VERSION="1.11.3"
+KUBERNETES_VERSION="1.12.2"
 KUBERNETES_CNI="0.6.0"
+DOCKER_VERSION="18.06.0~ce~3-0~ubuntu"
 
 TOKEN=TOKEN
 MASTER_IP=MASTER_IP
@@ -24,11 +25,13 @@ cat <<EOF > /etc/apt/sources.list.d/docker.list
 deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
 EOF
 
+
 # update/install packages
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get -yq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
-apt-get install -y docker-ce \
+apt-get install -y \
+    docker-ce=${DOCKER_VERSION} \
     kubelet=${KUBERNETES_VERSION}-00 \
     kubeadm=${KUBERNETES_VERSION}-00 \
     kubernetes-cni=${KUBERNETES_CNI}-00
@@ -37,9 +40,14 @@ apt-get install -y docker-ce \
 systemctl enable docker
 systemctl start docker
 
+# Enable Flannel Networking
+sysctl net.bridge.bridge-nf-call-iptables=1
+
 # Specify node IP for kubelet.
-echo "Environment=\"KUBELET_EXTRA_ARGS=--node-ip=${PRIVATE_IP}\"" >> /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+echo "KUBELET_EXTRA_ARGS=--node-ip=${PRIVATE_IP} --cloud-provider=external" > /etc/default/kubelet
+
 systemctl daemon-reload
 systemctl restart kubelet
 
-kubeadm join --node-name "${HOSTNAME}" --token "$TOKEN" "$MASTER_IP":443 --discovery-token-unsafe-skip-ca-verification
+kubeadm reset --force
+kubeadm join --node-name "${HOSTNAME}" --token "${TOKEN}" "${MASTER_IP}":443 --discovery-token-unsafe-skip-ca-verification

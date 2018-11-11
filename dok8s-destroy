@@ -35,12 +35,6 @@ echo "- Destroying the tags"
 doctl -u "${API_ENDPOINT}" compute tag delete -f k8s-master
 doctl -u "${API_ENDPOINT}" compute tag delete -f k8s-node
 
-echo "- Destroying the load balancer"
-LB_ID=$(doctl -u "${API_ENDPOINT}" compute load-balancer list | grep "k8s-monitoring" | cut -d' ' -f1)
-if [ -n "${LB_ID}" ]; then
-    doctl -u "${API_ENDPOINT}" compute load-balancer delete "${LB_ID}" -f
-fi
-
 echo "- Destroying the node firewall"
 FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list | grep "k8s-nodes" | cut -d' ' -f1)
 if [ -n "${FW_ID}" ]; then
