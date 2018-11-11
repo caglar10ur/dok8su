@@ -6,7 +6,9 @@ By default master uses 2gb, nodes use 4gb droplets. They can be changed by setti
 
 dok8s uses [Flannel](https://coreos.com/flannel/docs/latest/kubernetes.html) for networking. It also installs [dashboard](https://github.com/kubernetes/dashboard/), [metrics server](https://github.com/kubernetes-incubator/metrics-server), [Prometheus](https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/) [with node_exported] and [Grafana](https://grafana.com/).
 
-It uses [DigitalOcean Load Balancer](https://www.digitalocean.com/products/load-balancer/) and configures the [DigitalOcean Firewall](https://www.digitalocean.com/products/cloud-firewalls/)
+It uses [Kubernetes Cloud Controller Manager for DigitalOcean
+](https://github.com/digitalocean/digitalocean-cloud-controller-manager), [
+A Container Storage Interface (CSI) Driver for DigitalOcean Block Storage](https://github.com/digitalocean/csi-digitalocean) and configures the [DigitalOcean Firewall](https://www.digitalocean.com/products/cloud-firewalls/)
 
 ## Requires
 
