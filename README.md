@@ -25,7 +25,6 @@ $ DIGITALOCEAN_ACCESS_TOKEN=XxX REGION=nyc3 MASTER_NAME=master NODE_NAME=node NO
 - Creating the master
 - Waiting master to finish installation
 - Waiting nodes to be ready
-- Creating the LoadBalancer
 - Creating the master firewall
 - Creating the node firewall
 - Installation completed
@@ -51,7 +50,6 @@ To destroy the cluster:
 $ DIGITALOCEAN_ACCESS_TOKEN=XxX MASTER_NAME=master NODE_NAME=node ./dok8s-destroy
 - Destroying the droplets
 - Destroying the tags
-- Destroying the load balancer
 - Destroying the node firewall
 - Destroying the master firewall
 - Destroy completed
