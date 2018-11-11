@@ -4,7 +4,7 @@
 
 By default master uses 2gb, nodes use 4gb droplets. They can be changed by setting the MASTER_SIZE and NODE_SIZE environment variables, respectively. All droplets are based on the ubuntu 16.04 image.
 
-dok8s uses [Flannel](https://coreos.com/flannel/docs/latest/kubernetes.html) for networking. It also installs [dashboard](https://github.com/kubernetes/dashboard/), [metrics server](https://github.com/kubernetes-incubator/metrics-server), [Prometheus](https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/) [with node_exported] and [Grafana](https://grafana.com/).
+dok8s uses [Flannel](https://coreos.com/flannel/docs/latest/kubernetes.html) for networking. It also installs [dashboard](https://github.com/kubernetes/dashboard/), [metrics server](https://github.com/kubernetes-incubator/metrics-server), [Prometheus](https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/) [with node_exporter] and [Grafana](https://grafana.com/).
 
 It uses [Kubernetes Cloud Controller Manager for DigitalOcean
 ](https://github.com/digitalocean/digitalocean-cloud-controller-manager), [
