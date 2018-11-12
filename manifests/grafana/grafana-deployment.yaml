@@ -39,8 +39,12 @@ spec:
         - mountPath: /var/lib/grafana
           name: data
       restartPolicy: Always
-      securityContext: {}
+      securityContext:
+        fsGroup: 417
+        runAsNonRoot: true
+        runAsUser: 417
       terminationGracePeriodSeconds: 30
       volumes:
-      - emptyDir: {}
-        name: data
+        - name: data
+          persistentVolumeClaim:
+            claimName: grafana-deployment-pvc

@@ -23,6 +23,10 @@ spec:
               mountPath: /etc/prometheus/
             - name: prometheus-storage-volume
               mountPath: /prometheus/
+      securityContext:
+        fsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
       volumes:
         - name: prometheus-config-volume
           configMap:
@@ -30,4 +34,5 @@ spec:
             name: prometheus-server-conf
 
         - name: prometheus-storage-volume
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: prometheus-deployment-pvc
