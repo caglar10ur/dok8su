@@ -54,7 +54,7 @@ if [ ! -f ~/.ssh/k8s/id_rsa ]; then
     doctl -u "${API_ENDPOINT}" compute ssh-key import k8s-ssh --public-key-file ~/.ssh/k8s/id_rsa.pub
 fi
 
-SSH_ID=$(doctl -u "${API_ENDPOINT}" compute ssh-key list | grep "k8s-ssh" | cut -d' ' -f1)
+SSH_ID=$(doctl -u "${API_ENDPOINT}" compute ssh-key list --format ID,Name --no-header | grep "k8s-ssh" | cut -d' ' -f1)
 SSH_KEY=$(doctl -u "${API_ENDPOINT}" compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
 
 # create tags
@@ -86,18 +86,18 @@ doctl -u "${API_ENDPOINT}" compute droplet create "${MASTER_NAME}" \
     --wait > /dev/null
 
 # get the public/private ips of the master
-MASTER_ID=$(doctl -u "${API_ENDPOINT}" compute droplet list | grep "${MASTER_NAME}" |cut -d' ' -f1)
+MASTER_ID=$(doctl -u "${API_ENDPOINT}" compute droplet list "${MASTER_NAME}" --format=ID --tag-name "${TAG_PREFIX}"-master --no-header)
 PUBLIC_IP=$(doctl -u "${API_ENDPOINT}" compute droplet get "${MASTER_ID}" --format PublicIPv4 --no-header)
 PRIVATE_IP=$(doctl -u "${API_ENDPOINT}" compute droplet get "${MASTER_ID}" --format PrivateIPv4 --no-header)
 
 echo "- Waiting master to finish installation"
 
 # wait till we get admin.conf
-while ! scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/k8s/id_rsa root@"${PUBLIC_IP}":/etc/kubernetes/admin.conf . 2> /dev/null; do
+while ! scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/k8s/id_rsa root@"${PUBLIC_IP}":/etc/kubernetes/admin.conf admin."${TAG_PREFIX}".conf 2> /dev/null; do
     sleep 10
 done
 
-KUBECONFIG=$(pwd)/admin.conf
+KUBECONFIG=$(pwd)/admin."${TAG_PREFIX}".conf
 export KUBECONFIG
 
 # update the node.sh with MASTER_IP

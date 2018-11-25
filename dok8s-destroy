@@ -3,7 +3,7 @@
 TAG_PREFIX=${TAG_PREFIX:-k8s}
 
 if [ ! -f ~/.ssh/k8s/id_rsa ]; then
-    SSH_ID=$(doctl -u "${API_ENDPOINT}" compute ssh-key list | grep "k8s-ssh" | cut -d' ' -f1)
+    SSH_ID=$(doctl -u "${API_ENDPOINT}" compute ssh-key list --format ID,Name --no-header | grep "k8s-ssh" | cut -d' ' -f1)
     if [ -n "${SSH_ID}" ]; then
         SSH_KEY=$(doctl -u "${API_ENDPOINT}" compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
     fi
@@ -37,13 +37,13 @@ doctl -u "${API_ENDPOINT}" compute tag delete -f "${TAG_PREFIX}"-master
 doctl -u "${API_ENDPOINT}" compute tag delete -f "${TAG_PREFIX}"-node
 
 echo "- Destroying the node firewall"
-FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list | grep "${TAG_PREFIX}"-nodes | cut -d' ' -f1)
+FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list --format ID,Name --no-header | grep "${TAG_PREFIX}"-nodes | cut -d' ' -f1)
 if [ -n "${FW_ID}" ]; then
     doctl -u "${API_ENDPOINT}" compute firewall delete "${FW_ID}" -f
 fi
 
 echo "- Destroying the master firewall"
-FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list | grep "${TAG_PREFIX}"-master | cut -d' ' -f1)
+FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list --format ID,Name --no-header | grep "${TAG_PREFIX}"-master | cut -d' ' -f1)
 if [ -n "${FW_ID}" ]; then
     doctl -u "${API_ENDPOINT}" compute firewall delete "${FW_ID}" -f
 fi

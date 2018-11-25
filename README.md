@@ -28,7 +28,7 @@ $ DIGITALOCEAN_ACCESS_TOKEN=<omitted> REGION=nyc3 TAG_PREFIX=nyc3-k8s MASTER_NAM
 - Creating the node firewall
 - Installation completed
 
-$ export KUBECONFIG=admin.conf
+$ export KUBECONFIG=admin.nyc3-k8s.conf
 $ kubectl get nodes
 NAME     STATUS   ROLES    AGE     VERSION
 master   Ready    master   4m28s   v1.12.2
