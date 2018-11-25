@@ -1,5 +1,6 @@
 #!/bin/bash
 
+TAG_PREFIX=${TAG_PREFIX:-k8s}
 
 if [ ! -f ~/.ssh/k8s/id_rsa ]; then
     SSH_ID=$(doctl -u "${API_ENDPOINT}" compute ssh-key list | grep "k8s-ssh" | cut -d' ' -f1)
@@ -20,7 +21,7 @@ API_ENDPOINT=${API_ENDPOINT:-https://api.digitalocean.com/}
 echo "- Destroying the droplets"
 # delete the droplets
 NODES=()
-for TAG in k8s-master k8s-node; do
+for TAG in "${TAG_PREFIX}"-master "${TAG_PREFIX}"-node; do
     DROPLET="$(doctl -u "${API_ENDPOINT}" compute droplet list --format=ID --tag-name=${TAG} --no-header)"
     if [ "${DROPLET}" ]; then
         NODES+=("${DROPLET}")
@@ -32,17 +33,17 @@ fi
 
 echo "- Destroying the tags"
 # delete the tags
-doctl -u "${API_ENDPOINT}" compute tag delete -f k8s-master
-doctl -u "${API_ENDPOINT}" compute tag delete -f k8s-node
+doctl -u "${API_ENDPOINT}" compute tag delete -f "${TAG_PREFIX}"-master
+doctl -u "${API_ENDPOINT}" compute tag delete -f "${TAG_PREFIX}"-node
 
 echo "- Destroying the node firewall"
-FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list | grep "k8s-nodes" | cut -d' ' -f1)
+FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list | grep "${TAG_PREFIX}"-nodes | cut -d' ' -f1)
 if [ -n "${FW_ID}" ]; then
     doctl -u "${API_ENDPOINT}" compute firewall delete "${FW_ID}" -f
 fi
 
 echo "- Destroying the master firewall"
-FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list | grep "k8s-master" | cut -d' ' -f1)
+FW_ID=$(doctl -u "${API_ENDPOINT}" compute firewall list | grep "${TAG_PREFIX}"-master | cut -d' ' -f1)
 if [ -n "${FW_ID}" ]; then
     doctl -u "${API_ENDPOINT}" compute firewall delete "${FW_ID}" -f
 fi

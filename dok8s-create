@@ -19,6 +19,8 @@ NODE_COUNT=${NODE_COUNT:-3}
 
 API_ENDPOINT=${API_ENDPOINT:-https://api.digitalocean.com/}
 
+TAG_PREFIX=${TAG_PREFIX:-k8s}
+
 command_exists () {
     type "$1" &> /dev/null;
 }
@@ -56,8 +58,8 @@ SSH_ID=$(doctl -u "${API_ENDPOINT}" compute ssh-key list | grep "k8s-ssh" | cut 
 SSH_KEY=$(doctl -u "${API_ENDPOINT}" compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
 
 # create tags
-doctl -u "${API_ENDPOINT}" compute tag create k8s-master > /dev/null
-doctl -u "${API_ENDPOINT}" compute tag create k8s-node > /dev/null
+doctl -u "${API_ENDPOINT}" compute tag create "${TAG_PREFIX}"-master > /dev/null
+doctl -u "${API_ENDPOINT}" compute tag create "${TAG_PREFIX}"-node > /dev/null
 
 # Generate token and insert into the script files
 TOKEN6=$(env LC_CTYPE=C tr -dc 'a-z0-9' < /dev/urandom | fold -w "${1:-6}" | head -n 1)
@@ -75,7 +77,7 @@ doctl -u "${API_ENDPOINT}" compute droplet create "${MASTER_NAME}" \
     --region "${REGION}" \
     --image ubuntu-16-04-x64 \
     --size "${MASTER_SIZE}" \
-    --tag-name k8s-master \
+    --tag-name "${TAG_PREFIX}"-master \
     --ssh-keys "${SSH_KEY}" \
     --enable-private-networking \
     --enable-ipv6 \
@@ -113,7 +115,7 @@ doctl -u "${API_ENDPOINT}" compute droplet create "${nodes[@]}" \
     --region "${REGION}" \
     --image ubuntu-16-04-x64 \
     --size "${NODE_SIZE}" \
-    --tag-name k8s-node \
+    --tag-name "${TAG_PREFIX}"-node \
     --ssh-keys "${SSH_KEY}" \
     --enable-private-networking \
     --enable-ipv6 \
@@ -158,17 +160,17 @@ GRAFPORT=$(kubectl -n monitoring get svc -o 'go-template={{range .items}}{{range
 
 echo "- Creating the master firewall"
 doctl -u "${API_ENDPOINT}" compute firewall create \
-    --name k8s-master \
-    --inbound-rules "protocol:tcp,ports:all,tag:k8s-node protocol:udp,ports:all,tag:k8s-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
+    --name "${TAG_PREFIX}"-master \
+    --inbound-rules "protocol:tcp,ports:all,tag:"${TAG_PREFIX}"-node protocol:udp,ports:all,tag:"${TAG_PREFIX}"-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
-    --tag-names k8s-master > /dev/null
+    --tag-names "${TAG_PREFIX}"-master > /dev/null
 
 
 echo "- Creating the node firewall"
 doctl -u "${API_ENDPOINT}" compute firewall create \
-    --name k8s-nodes \
-    --inbound-rules "protocol:tcp,ports:all,tag:k8s-master protocol:udp,ports:all,tag:k8s-master protocol:tcp,ports:all,tag:k8s-node protocol:udp,ports:all,tag:k8s-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${GRAFPORT},address:0.0.0.0/0,address:::/0" \
+    --name "${TAG_PREFIX}"-nodes \
+    --inbound-rules "protocol:tcp,ports:all,tag:"${TAG_PREFIX}"-master protocol:udp,ports:all,tag:"${TAG_PREFIX}"-master protocol:tcp,ports:all,tag:"${TAG_PREFIX}"-node protocol:udp,ports:all,tag:"${TAG_PREFIX}"-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${GRAFPORT},address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
-    --tag-names k8s-node > /dev/null
+    --tag-names "${TAG_PREFIX}"-node > /dev/null
 
 echo "- Installation completed"
