@@ -91,7 +91,6 @@ PUBLIC_IP=$(doctl -u "${API_ENDPOINT}" compute droplet get "${MASTER_ID}" --form
 PRIVATE_IP=$(doctl -u "${API_ENDPOINT}" compute droplet get "${MASTER_ID}" --format PrivateIPv4 --no-header)
 
 echo "- Waiting master to finish installation"
-
 # wait till we get admin.conf
 while ! scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/k8s/id_rsa root@"${PUBLIC_IP}":/etc/kubernetes/admin.conf admin."${TAG_PREFIX}".conf 2> /dev/null; do
     sleep 10
@@ -158,10 +157,25 @@ EOF
 PROMPORT=$(kubectl -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 9090.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 GRAFPORT=$(kubectl -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 3000.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 
+PROMLB=$(doctl compute load-balancer list | grep "protocol:tcp,port:${PROMPORT}" | cut -d' ' -f1)
+until [ ! -z "${PROMLB}" ]
+do
+    sleep 10
+    PROMLB=$(doctl compute load-balancer list | grep "protocol:tcp,port:${PROMPORT}" | cut -d' ' -f1)
+done
+
+
+GRAFLB=$(doctl compute load-balancer list | grep "protocol:tcp,port:${GRAFPORT}" | cut -d' ' -f1)
+until [ ! -z "${GRAFLB}" ]
+do
+    sleep 10
+    GRAFLB=$(doctl compute load-balancer list | grep "protocol:tcp,port:${GRAFPORT}" | cut -d' ' -f1)
+done
+
 echo "- Creating the master firewall"
 doctl -u "${API_ENDPOINT}" compute firewall create \
     --name "${TAG_PREFIX}"-master \
-    --inbound-rules "protocol:tcp,ports:all,tag:"${TAG_PREFIX}"-node protocol:udp,ports:all,tag:"${TAG_PREFIX}"-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
+    --inbound-rules "protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names "${TAG_PREFIX}"-master > /dev/null
 
@@ -169,7 +183,7 @@ doctl -u "${API_ENDPOINT}" compute firewall create \
 echo "- Creating the node firewall"
 doctl -u "${API_ENDPOINT}" compute firewall create \
     --name "${TAG_PREFIX}"-nodes \
-    --inbound-rules "protocol:tcp,ports:all,tag:"${TAG_PREFIX}"-master protocol:udp,ports:all,tag:"${TAG_PREFIX}"-master protocol:tcp,ports:all,tag:"${TAG_PREFIX}"-node protocol:udp,ports:all,tag:"${TAG_PREFIX}"-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${GRAFPORT},address:0.0.0.0/0,address:::/0" \
+    --inbound-rules "protocol:tcp,ports:all,tag:${TAG_PREFIX}-master protocol:udp,ports:all,tag:${TAG_PREFIX}-master protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},load_balancer_uid:${PROMLB} protocol:tcp,ports:${GRAFPORT},load_balancer_uid:${GRAFLB}" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names "${TAG_PREFIX}"-node > /dev/null
 
