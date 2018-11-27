@@ -45,21 +45,27 @@ if ! command_exists kubectl; then
     exit 1
 fi
 
+KUBECTL_FLAGS="--kubeconfig $(pwd)/admin.${TAG_PREFIX}.conf"
+KUBECTL="kubectl ${KUBECTL_FLAGS}"
+
+DOCTL_FLAGS="-u ${API_ENDPOINT}"
+DOCTL="doctl ${DOCTL_FLAGS}"
+
 # generate k8s specific ssh keys
 if [ ! -f ~/.ssh/k8s/id_rsa ]; then
     mkdir -p ~/.ssh/k8s/
     ssh-keygen -t rsa -b 4096 -C "k8s" -f ~/.ssh/k8s/id_rsa -N '' > /dev/null
 
     # import the new ssh key
-    doctl -u "${API_ENDPOINT}" compute ssh-key import k8s-ssh --public-key-file ~/.ssh/k8s/id_rsa.pub
+    ${DOCTL} compute ssh-key import k8s-ssh --public-key-file ~/.ssh/k8s/id_rsa.pub
 fi
 
-SSH_ID=$(doctl -u "${API_ENDPOINT}" compute ssh-key list --format ID,Name --no-header | grep "k8s-ssh" | cut -d' ' -f1)
-SSH_KEY=$(doctl -u "${API_ENDPOINT}" compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
+SSH_ID=$(${DOCTL} compute ssh-key list --format ID,Name --no-header | grep "k8s-ssh" | cut -d' ' -f1)
+SSH_KEY=$(${DOCTL} compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
 
 # create tags
-doctl -u "${API_ENDPOINT}" compute tag create "${TAG_PREFIX}"-master > /dev/null
-doctl -u "${API_ENDPOINT}" compute tag create "${TAG_PREFIX}"-node > /dev/null
+${DOCTL} compute tag create "${TAG_PREFIX}"-master > /dev/null
+${DOCTL} compute tag create "${TAG_PREFIX}"-node > /dev/null
 
 # Generate token and insert into the script files
 TOKEN6=$(env LC_CTYPE=C tr -dc 'a-z0-9' < /dev/urandom | fold -w "${1:-6}" | head -n 1)
@@ -69,11 +75,10 @@ TOKEN="${TOKEN6}"."${TOKEN16}"
 # update the master.sh/node.sh with TOKEN
 sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/; s/^DIGITALOCEAN_ACCESS_TOKEN=.*/DIGITALOCEAN_ACCESS_TOKEN=${DIGITALOCEAN_ACCESS_TOKEN}/" "${DIR}"/templates/master.sh.template > "${TEMP_DIR}"/master.sh
 sed -e "s/^TOKEN=.*/TOKEN=${TOKEN}/" "${DIR}"/templates/node.sh.template > "${TEMP_DIR}"/node.sh
-
 echo "- Creating the ${MASTER_NAME}"
 
 # create the master
-doctl -u "${API_ENDPOINT}" compute droplet create "${MASTER_NAME}" \
+${DOCTL} compute droplet create "${MASTER_NAME}" \
     --region "${REGION}" \
     --image ubuntu-16-04-x64 \
     --size "${MASTER_SIZE}" \
@@ -86,18 +91,15 @@ doctl -u "${API_ENDPOINT}" compute droplet create "${MASTER_NAME}" \
     --wait > /dev/null
 
 # get the public/private ips of the master
-MASTER_ID=$(doctl -u "${API_ENDPOINT}" compute droplet list "${MASTER_NAME}" --format=ID --tag-name "${TAG_PREFIX}"-master --no-header)
-PUBLIC_IP=$(doctl -u "${API_ENDPOINT}" compute droplet get "${MASTER_ID}" --format PublicIPv4 --no-header)
-PRIVATE_IP=$(doctl -u "${API_ENDPOINT}" compute droplet get "${MASTER_ID}" --format PrivateIPv4 --no-header)
+MASTER_ID=$(${DOCTL} compute droplet list "${MASTER_NAME}" --format=ID --tag-name "${TAG_PREFIX}"-master --no-header)
+PUBLIC_IP=$(${DOCTL} compute droplet get "${MASTER_ID}" --format PublicIPv4 --no-header)
+PRIVATE_IP=$(${DOCTL} compute droplet get "${MASTER_ID}" --format PrivateIPv4 --no-header)
 
 echo "- Waiting master to finish installation"
 # wait till we get admin.conf
 while ! scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/k8s/id_rsa root@"${PUBLIC_IP}":/etc/kubernetes/admin.conf admin."${TAG_PREFIX}".conf 2> /dev/null; do
     sleep 10
 done
-
-KUBECONFIG=$(pwd)/admin."${TAG_PREFIX}".conf
-export KUBECONFIG
 
 # update the node.sh with MASTER_IP
 sed -i.bak "s/^MASTER_IP=.*/MASTER_IP=${PRIVATE_IP}/" "${TEMP_DIR}"/node.sh
@@ -110,7 +112,7 @@ for i in $(seq "${NODE_COUNT}"); do
 done
 
 # join the nodes to the cluster
-doctl -u "${API_ENDPOINT}" compute droplet create "${nodes[@]}" \
+${DOCTL} compute droplet create "${nodes[@]}" \
     --region "${REGION}" \
     --image ubuntu-16-04-x64 \
     --size "${NODE_SIZE}" \
@@ -124,20 +126,22 @@ doctl -u "${API_ENDPOINT}" compute droplet create "${nodes[@]}" \
 
 echo "- Waiting nodes to be ready"
 # wait till nodes are ready
-until [ "$(kubectl get nodes 2> /dev/null | grep -v master | grep -c Ready | xargs)" == "${NODE_COUNT}" ]
+until [ "$(${KUBECTL} get nodes 2> /dev/null | grep -v master | grep -c Ready | xargs)" == "${NODE_COUNT}" ]
 do
     sleep 10
 done
+${KUBECTL} wait --for=condition=Ready node -l dok8s/role=node --timeout=600s > /dev/null
 
-kubectl create -f manifests/metrics-server > /dev/null
+echo "- Deploying manifests"
+${KUBECTL} create -f manifests/metrics-server > /dev/null
 
-kubectl create namespace monitoring > /dev/null
-kubectl create -n monitoring -f manifests/prometheus > /dev/null
-kubectl create -n monitoring -f manifests/node-exporter > /dev/null
-kubectl create -n monitoring -f manifests/grafana/ > /dev/null
+${KUBECTL} create namespace monitoring > /dev/null
+${KUBECTL} create -n monitoring -f manifests/prometheus > /dev/null
+${KUBECTL} create -n monitoring -f manifests/node-exporter > /dev/null
+${KUBECTL} create -n monitoring -f manifests/grafana/ > /dev/null
 
 # set dashboard access to admin
-cat <<EOF | kubectl create -f - > /dev/null
+cat <<EOF | ${KUBECTL} create -f - > /dev/null
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
@@ -154,8 +158,9 @@ subjects:
   namespace: kube-system
 EOF
 
-PROMPORT=$(kubectl -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 9090.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
-GRAFPORT=$(kubectl -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 3000.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
+echo "- Waiting load-balancers to be ready"
+PROMPORT=$(${KUBECTL} -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 9090.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
+GRAFPORT=$(${KUBECTL} -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 3000.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 
 PROMLB=$(doctl compute load-balancer list | grep "protocol:tcp,port:${PROMPORT}" | cut -d' ' -f1)
 until [ ! -z "${PROMLB}" ]
@@ -173,7 +178,7 @@ do
 done
 
 echo "- Creating the master firewall"
-doctl -u "${API_ENDPOINT}" compute firewall create \
+${DOCTL} compute firewall create \
     --name "${TAG_PREFIX}"-master \
     --inbound-rules "protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
@@ -181,10 +186,10 @@ doctl -u "${API_ENDPOINT}" compute firewall create \
 
 
 echo "- Creating the node firewall"
-doctl -u "${API_ENDPOINT}" compute firewall create \
+${DOCTL} compute firewall create \
     --name "${TAG_PREFIX}"-nodes \
     --inbound-rules "protocol:tcp,ports:all,tag:${TAG_PREFIX}-master protocol:udp,ports:all,tag:${TAG_PREFIX}-master protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},load_balancer_uid:${PROMLB} protocol:tcp,ports:${GRAFPORT},load_balancer_uid:${GRAFLB}" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names "${TAG_PREFIX}"-node > /dev/null
 
-echo "- Installation completed"
+echo "- Installation completed (took $SECONDS seconds)"

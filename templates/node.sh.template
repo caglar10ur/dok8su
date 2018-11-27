@@ -44,7 +44,7 @@ systemctl start docker
 sysctl net.bridge.bridge-nf-call-iptables=1
 
 # Specify node IP for kubelet.
-echo "KUBELET_EXTRA_ARGS=--node-ip=${PRIVATE_IP} --cloud-provider=external" > /etc/default/kubelet
+echo "KUBELET_EXTRA_ARGS=--node-ip=${PRIVATE_IP} --cloud-provider=external --node-labels='dok8s/role=node'" > /etc/default/kubelet
 
 systemctl daemon-reload
 systemctl restart kubelet
