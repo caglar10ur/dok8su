@@ -119,7 +119,7 @@ kubectl -n kube-system create secret generic digitalocean --from-literal=access-
 kubectl apply -f https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/master/releases/v0.1.8.yml --kubeconfig /etc/kubernetes/admin.conf
 
 # A Container Storage Interface (CSI) Driver for DigitalOcean Block Storage
-kubectl apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v0.4.0.yaml --kubeconfig /etc/kubernetes/admin.conf
+kubectl apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v0.3.1.yaml --kubeconfig /etc/kubernetes/admin.conf
 
 # dashboard
 kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml --kubeconfig /etc/kubernetes/admin.conf
