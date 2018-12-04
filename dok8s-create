@@ -162,19 +162,19 @@ echo "- Waiting load-balancers to be ready"
 PROMPORT=$(${KUBECTL} -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 9090.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 GRAFPORT=$(${KUBECTL} -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 3000.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 
-PROMLB=$(doctl compute load-balancer list | grep "protocol:tcp,port:${PROMPORT}" | cut -d' ' -f1)
+PROMLB=$(doctl compute load-balancer list | grep active | grep "protocol:tcp,port:${PROMPORT}" | cut -d' ' -f1)
 until [ ! -z "${PROMLB}" ]
 do
     sleep 10
-    PROMLB=$(doctl compute load-balancer list | grep "protocol:tcp,port:${PROMPORT}" | cut -d' ' -f1)
+    PROMLB=$(doctl compute load-balancer list | grep active | grep "protocol:tcp,port:${PROMPORT}" | cut -d' ' -f1)
 done
 
 
-GRAFLB=$(doctl compute load-balancer list | grep "protocol:tcp,port:${GRAFPORT}" | cut -d' ' -f1)
+GRAFLB=$(doctl compute load-balancer list | grep active | grep "protocol:tcp,port:${GRAFPORT}" | cut -d' ' -f1)
 until [ ! -z "${GRAFLB}" ]
 do
     sleep 10
-    GRAFLB=$(doctl compute load-balancer list | grep "protocol:tcp,port:${GRAFPORT}" | cut -d' ' -f1)
+    GRAFLB=$(doctl compute load-balancer list | grep active | grep "protocol:tcp,port:${GRAFPORT}" | cut -d' ' -f1)
 done
 
 echo "- Creating the master firewall"
