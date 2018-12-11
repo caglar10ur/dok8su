@@ -1,8 +1,10 @@
-# dok8s
+# dok8su (u for unmanaged)
 
-*Disclaimer: Not For Production Use*
+**BEWARE: This is probably not you are looking for. Please see [dok8s](do.co/dok8s) for DigitalOcean's managed Kubernetes solution**
 
-(Yet another) Collection of scripts to create a [kubernetes](https://kubernetes.io/) cluster with multiple nodes using kubeadm from the latest stable version of kubernetes.
+**Not For Production Use**
+
+(Yet another) Collection of scripts to create a [kubernetes](https://kubernetes.io/) **unmanaged** cluster with multiple nodes using kubeadm from the latest stable version of kubernetes.
 
 By default master uses 2gb, nodes use 4gb droplets. They can be changed by setting the MASTER_SIZE and NODE_SIZE environment variables, respectively. All droplets are based on the ubuntu 16.04 image.
 
