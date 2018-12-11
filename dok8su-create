@@ -130,7 +130,7 @@ until [ "$(${KUBECTL} get nodes 2> /dev/null | grep -v master | grep -c Ready | 
 do
     sleep 10
 done
-${KUBECTL} wait --for=condition=Ready node -l dok8s/role=node --timeout=600s > /dev/null
+${KUBECTL} wait --for=condition=Ready node -l dok8su/role=node --timeout=600s > /dev/null
 
 echo "- Deploying manifests"
 ${KUBECTL} create -f manifests/metrics-server > /dev/null

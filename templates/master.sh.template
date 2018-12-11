@@ -83,7 +83,7 @@ auditPolicy:
   logMaxAge: 2
   path: ""
 certificatesDir: /etc/kubernetes/pki
-clusterName: dok8s
+clusterName: dok8su
 controlPlaneEndpoint: ""
 controllerManagerExtraArgs:
   horizontal-pod-autoscaler-sync-period: 10s
