@@ -197,3 +197,6 @@ ${DOCTL} compute firewall create \
     --tag-names "${TAG_PREFIX}"-node > /dev/null
 
 echo "- Installation completed (took $SECONDS seconds)"
+
+echp "- To learn your dashboard token, please run;"
+echo "${KUBECTL} -n kube-system describe secret $(${KUBECTL} -n kube-system get secret | grep dok8su-admin | awk '{print $1}')"

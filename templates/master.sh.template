@@ -1,9 +1,12 @@
 #!/bin/bash
 
 # Specify the Kubernetes version to use.
-KUBERNETES_VERSION="1.12.3"
+KUBERNETES_VERSION="1.13.3"
 KUBERNETES_CNI="0.6.0"
 DOCKER_VERSION="18.06.0~ce~3-0~ubuntu"
+
+KUBECTL_FLAGS="--kubeconfig /etc/kubernetes/admin.conf"
+KUBECTL="kubectl ${KUBECTL_FLAGS}"
 
 TOKEN=TOKEN
 DIGITALOCEAN_ACCESS_TOKEN=DIGITALOCEAN_ACCESS_TOKEN
@@ -109,20 +112,19 @@ kubeadm init --config /etc/kubeadm.config.yaml
 
 # flannel
 sysctl net.bridge.bridge-nf-call-iptables=1
-#kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml --kubeconfig /etc/kubernetes/admin.conf
-kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml --kubeconfig /etc/kubernetes/admin.conf
+${KUBECTL} apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
 
 # DO secret
-kubectl -n kube-system create secret generic digitalocean --from-literal=access-token=${DIGITALOCEAN_ACCESS_TOKEN} --kubeconfig /etc/kubernetes/admin.conf
+${KUBECTL} -n kube-system create secret generic digitalocean --from-literal=access-token=${DIGITALOCEAN_ACCESS_TOKEN}
 
 # DigitalOcean Cloud-Manager
-kubectl apply -f https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/master/releases/v0.1.8.yml --kubeconfig /etc/kubernetes/admin.conf
+${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/master/releases/v0.1.8.yml
 
 # A Container Storage Interface (CSI) Driver for DigitalOcean Block Storage
-kubectl apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v0.4.0.yaml --kubeconfig /etc/kubernetes/admin.conf
+${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v1.0.0.yaml
 
 # dashboard
-kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml --kubeconfig /etc/kubernetes/admin.conf
+${KUBECTL} create -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
 
 # setup for root user
 mkdir -p ~/.kube
