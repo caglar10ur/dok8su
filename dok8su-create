@@ -139,6 +139,9 @@ ${KUBECTL} create namespace monitoring > /dev/null
 ${KUBECTL} create -n monitoring -f manifests/prometheus > /dev/null
 ${KUBECTL} create -n monitoring -f manifests/node-exporter > /dev/null
 ${KUBECTL} create -n monitoring -f manifests/grafana/ > /dev/null
+${KUBECTL} create -n monitoring -f manifests/prometheus-adapter/prometheus-adapter.yaml --validate=false > /dev/null
+
+${KUBECTL} create -f manifests/auto-scaling/ > /dev/null
 
 # set dashboard access to admin
 cat <<EOF | ${KUBECTL} create -f - > /dev/null
@@ -165,6 +168,7 @@ EOF
 echo "- Waiting load-balancers to be ready"
 PROMPORT=$(${KUBECTL} -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 9090.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 GRAFPORT=$(${KUBECTL} -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 3000.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
+PODIPORT=$(${KUBECTL} -n default get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 9898.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 
 PROMLB=$(doctl compute load-balancer list | grep active | grep "protocol:tcp,port:${PROMPORT}" | cut -d' ' -f1)
 until [ ! -z "${PROMLB}" ]
@@ -181,6 +185,13 @@ do
     GRAFLB=$(doctl compute load-balancer list | grep active | grep "protocol:tcp,port:${GRAFPORT}" | cut -d' ' -f1)
 done
 
+PODILB=$(doctl compute load-balancer list | grep active | grep "protocol:tcp,port:${PODIPORT}" | cut -d' ' -f1)
+until [ ! -z "${PODILB}" ]
+do
+    sleep 10
+    PODILB=$(doctl compute load-balancer list | grep active | grep "protocol:tcp,port:${PODIPORT}" | cut -d' ' -f1)
+done
+
 echo "- Creating the master firewall"
 ${DOCTL} compute firewall create \
     --name "${TAG_PREFIX}"-master \
@@ -192,7 +203,7 @@ ${DOCTL} compute firewall create \
 echo "- Creating the node firewall"
 ${DOCTL} compute firewall create \
     --name "${TAG_PREFIX}"-nodes \
-    --inbound-rules "protocol:tcp,ports:all,tag:${TAG_PREFIX}-master protocol:udp,ports:all,tag:${TAG_PREFIX}-master protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},load_balancer_uid:${PROMLB} protocol:tcp,ports:${GRAFPORT},load_balancer_uid:${GRAFLB}" \
+    --inbound-rules "protocol:tcp,ports:all,tag:${TAG_PREFIX}-master protocol:udp,ports:all,tag:${TAG_PREFIX}-master protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},load_balancer_uid:${PROMLB} protocol:tcp,ports:${GRAFPORT},load_balancer_uid:${GRAFLB} protocol:tcp,ports:${PODIPORT},load_balancer_uid:${PODILB}" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names "${TAG_PREFIX}"-node > /dev/null
 
