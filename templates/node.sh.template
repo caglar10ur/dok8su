@@ -3,7 +3,7 @@
 # Specify the Kubernetes version to use.
 KUBERNETES_VERSION="1.13.3"
 KUBERNETES_CNI="0.6.0"
-DOCKER_VERSION="18.06.0~ce~3-0~ubuntu"
+DOCKER_VERSION="5:18.09.2~3-0~ubuntu-xenial"
 
 TOKEN=TOKEN
 MASTER_IP=MASTER_IP
@@ -35,6 +35,8 @@ apt-get install -y \
     kubelet=${KUBERNETES_VERSION}-00 \
     kubeadm=${KUBERNETES_VERSION}-00 \
     kubernetes-cni=${KUBERNETES_CNI}-00
+
+apt -y autoremove
 
 # Enable and start Docker.
 systemctl enable docker
