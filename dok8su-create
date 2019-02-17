@@ -182,7 +182,7 @@ done
 echo "- Creating the master firewall"
 ${DOCTL} compute firewall create \
     --name "${TAG_PREFIX}"-master \
-    --inbound-rules "protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
+    --inbound-rules "protocol:icmp,tag:${TAG_PREFIX}-master,tag:${TAG_PREFIX}-node protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names "${TAG_PREFIX}"-master > /dev/null
 
@@ -190,7 +190,7 @@ ${DOCTL} compute firewall create \
 echo "- Creating the node firewall"
 ${DOCTL} compute firewall create \
     --name "${TAG_PREFIX}"-nodes \
-    --inbound-rules "protocol:tcp,ports:all,tag:${TAG_PREFIX}-master protocol:udp,ports:all,tag:${TAG_PREFIX}-master protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},load_balancer_uid:${PROMLB} protocol:tcp,ports:${GRAFPORT},load_balancer_uid:${GRAFLB}" \
+    --inbound-rules "protocol:icmp,tag:${TAG_PREFIX}-master,tag:${TAG_PREFIX}-node protocol:tcp,ports:all,tag:${TAG_PREFIX}-master protocol:udp,ports:all,tag:${TAG_PREFIX}-master protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},load_balancer_uid:${PROMLB} protocol:tcp,ports:${GRAFPORT},load_balancer_uid:${GRAFLB}" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names "${TAG_PREFIX}"-node > /dev/null
 

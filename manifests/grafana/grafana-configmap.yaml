@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: grafana
+  name: grafana-datasources-provider
+  namespace: monitoring
+data:
+  providers.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: 'prometheus'
+      type: prometheus
+      access: proxy
+      orgId: 1
+      url: http://prometheus:8080
+      isDefault: true
+      editable: false

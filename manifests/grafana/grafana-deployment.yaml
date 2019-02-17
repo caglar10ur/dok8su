@@ -38,6 +38,8 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/grafana
           name: data
+        - mountPath: /etc/grafana/provisioning/datasources
+          name: datasources
       restartPolicy: Always
       securityContext:
         fsGroup: 417
@@ -48,3 +50,9 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: grafana-deployment-pvc
+        - name: datasources
+          configMap:
+            name: grafana-datasources-provider
+            items:
+              - key: providers.yaml
+                path: providers.yaml
