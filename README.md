@@ -6,9 +6,9 @@
 
 (Yet another) Collection of scripts to create an **unmanaged** [kubernetes](https://kubernetes.io/) cluster with multiple nodes using kubeadm from the latest stable version of kubernetes.
 
-By default master uses 2gb and nodes use 4gb droplets. They can be configured via setting MASTER_SIZE and NODE_SIZE environment variables, respectively. Master and nodes uses the ubuntu 16.04 image.
+By default master uses 2gb and nodes use 4gb droplets. They can be configured via setting MASTER_SIZE and NODE_SIZE environment variables, respectively. Master and nodes uses the ubuntu 18.04 [bionic] image.
 
-dok8su uses [Flannel](https://coreos.com/flannel/docs/latest/kubernetes.html) for networking. It also installs [dashboard](https://github.com/kubernetes/dashboard/), [metrics server](https://github.com/kubernetes-incubator/metrics-server), [Prometheus](https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/) [with node_exporter] and [Grafana](https://grafana.com/).
+dok8su uses [Cilium](https://cilium.io/) for networking. It also installs [dashboard](https://github.com/kubernetes/dashboard/), [metrics server](https://github.com/kubernetes-incubator/metrics-server), [Prometheus](https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/) [with node_exporter] and [Grafana](https://grafana.com/).
 
 It uses [Kubernetes Cloud Controller Manager for DigitalOcean](https://github.com/digitalocean/digitalocean-cloud-controller-manager), [Container Storage Interface (CSI) Driver for DigitalOcean Block Storage](https://github.com/digitalocean/csi-digitalocean) and configures the [DigitalOcean Firewall](https://www.digitalocean.com/products/cloud-firewalls/)
 

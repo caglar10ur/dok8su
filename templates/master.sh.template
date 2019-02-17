@@ -3,7 +3,7 @@
 # Specify the Kubernetes version to use.
 KUBERNETES_VERSION="1.13.3"
 KUBERNETES_CNI="0.6.0"
-DOCKER_VERSION="5:18.09.2~3-0~ubuntu-xenial"
+DOCKER_VERSION="5:18.09.2~3-0~ubuntu-bionic"
 
 KUBECTL_FLAGS="--kubeconfig /etc/kubernetes/admin.conf"
 KUBECTL="kubectl ${KUBECTL_FLAGS}"
@@ -22,7 +22,7 @@ EOF
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
 cat <<EOF > /etc/apt/sources.list.d/docker.list
-deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable
 EOF
 
 # update/install packages
@@ -51,10 +51,10 @@ systemctl daemon-reload
 systemctl restart kubelet
 
 cat << EOF >  "/etc/kubeadm.config.yaml"
-apiEndpoint:
+apiVersion: kubeadm.k8s.io/v1beta1
+localAPIEndpoint:
   advertiseAddress: ${PUBLIC_IP}
   bindPort: 443
-apiVersion: kubeadm.k8s.io/v1alpha3
 bootstrapTokens:
 - groups:
   - system:bootstrappers:kubeadm:default-node-token
@@ -71,50 +71,38 @@ nodeRegistration:
   - effect: NoSchedule
     key: node-role.kubernetes.io/master
 ---
-apiServerCertSANs:
-- ${PUBLIC_IP}
-- ${PRIVATE_IP}
-- ${HOSTNAME}
-apiServerExtraArgs:
-  kubelet-preferred-address-types: InternalIP,ExternalIP,Hostname
-authorizationModes:
-- Node
-- RBAC
-apiServerExtraArgs:
-  runtime-config: api/all=true
-apiVersion: kubeadm.k8s.io/v1alpha3
-auditPolicy:
-  logDir: /var/log/kubernetes/audit
-  logMaxAge: 2
-  path: ""
+apiVersion: kubeadm.k8s.io/v1beta1
+apiServer:
+  certSANs:
+  - ${PUBLIC_IP}
+  - ${PRIVATE_IP}
+  - ${HOSTNAME}
+  extraArgs:
+    kubelet-preferred-address-types: InternalIP,ExternalIP,Hostname
+    runtime-config: api/all=true
+    authorization-mode: "Node,RBAC"
+controllerManager:
+  extraArgs:
+    horizontal-pod-autoscaler-sync-period: 10s
+    horizontal-pod-autoscaler-use-rest-clients: "true"
+    node-monitor-grace-period: 10s
 certificatesDir: /etc/kubernetes/pki
 clusterName: dok8su
-controlPlaneEndpoint: ""
-controllerManagerExtraArgs:
-  horizontal-pod-autoscaler-sync-period: 10s
-  horizontal-pod-autoscaler-use-rest-clients: "true"
-  node-monitor-grace-period: 10s
-etcd:
-  local:
-    dataDir: /var/lib/etcd
-    image: ""
 imageRepository: k8s.gcr.io
 kind: ClusterConfiguration
 kubernetesVersion: v${KUBERNETES_VERSION}
 networking:
   dnsDomain: cluster.local
-  podSubnet: 10.244.0.0/16
+  podSubnet: "10.100.0.1/24"
   serviceSubnet: 10.96.0.0/12
-unifiedControlPlaneImage: ""
 EOF
 
 # Initialize cluster
 kubeadm reset --force
 kubeadm init --config /etc/kubeadm.config.yaml
 
-# flannel
-sysctl net.bridge.bridge-nf-call-iptables=1
-${KUBECTL} apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
+# cilium
+${KUBECTL} apply -f https://raw.githubusercontent.com/cilium/cilium/v1.4/examples/kubernetes/1.13/cilium.yaml
 
 # DO secret
 ${KUBECTL} -n kube-system create secret generic digitalocean --from-literal=access-token=${DIGITALOCEAN_ACCESS_TOKEN}

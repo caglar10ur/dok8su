@@ -80,12 +80,11 @@ echo "- Creating the ${MASTER_NAME}"
 # create the master
 ${DOCTL} compute droplet create "${MASTER_NAME}" \
     --region "${REGION}" \
-    --image ubuntu-16-04-x64 \
+    --image ubuntu-18-04-x64 \
     --size "${MASTER_SIZE}" \
     --tag-name "${TAG_PREFIX}"-master \
     --ssh-keys "${SSH_KEY}" \
     --enable-private-networking \
-    --enable-ipv6 \
     --enable-monitoring \
     --user-data-file "${TEMP_DIR}"/master.sh \
     --wait > /dev/null
@@ -114,12 +113,11 @@ done
 # join the nodes to the cluster
 ${DOCTL} compute droplet create "${nodes[@]}" \
     --region "${REGION}" \
-    --image ubuntu-16-04-x64 \
+    --image ubuntu-18-04-x64 \
     --size "${NODE_SIZE}" \
     --tag-name "${TAG_PREFIX}"-node \
     --ssh-keys "${SSH_KEY}" \
     --enable-private-networking \
-    --enable-ipv6 \
     --enable-monitoring \
     --user-data-file "${TEMP_DIR}"/node.sh \
     --wait > /dev/null
