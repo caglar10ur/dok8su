@@ -80,12 +80,11 @@ echo "- Creating the ${MASTER_NAME}"
 # create the master
 ${DOCTL} compute droplet create "${MASTER_NAME}" \
     --region "${REGION}" \
-    --image ubuntu-16-04-x64 \
+    --image ubuntu-18-04-x64 \
     --size "${MASTER_SIZE}" \
     --tag-name "${TAG_PREFIX}"-master \
     --ssh-keys "${SSH_KEY}" \
     --enable-private-networking \
-    --enable-ipv6 \
     --enable-monitoring \
     --user-data-file "${TEMP_DIR}"/master.sh \
     --wait > /dev/null
@@ -114,12 +113,11 @@ done
 # join the nodes to the cluster
 ${DOCTL} compute droplet create "${nodes[@]}" \
     --region "${REGION}" \
-    --image ubuntu-16-04-x64 \
+    --image ubuntu-18-04-x64 \
     --size "${NODE_SIZE}" \
     --tag-name "${TAG_PREFIX}"-node \
     --ssh-keys "${SSH_KEY}" \
     --enable-private-networking \
-    --enable-ipv6 \
     --enable-monitoring \
     --user-data-file "${TEMP_DIR}"/node.sh \
     --wait > /dev/null
@@ -184,7 +182,7 @@ done
 echo "- Creating the master firewall"
 ${DOCTL} compute firewall create \
     --name "${TAG_PREFIX}"-master \
-    --inbound-rules "protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
+    --inbound-rules "protocol:icmp,tag:${TAG_PREFIX}-master,tag:${TAG_PREFIX}-node protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names "${TAG_PREFIX}"-master > /dev/null
 
@@ -192,7 +190,7 @@ ${DOCTL} compute firewall create \
 echo "- Creating the node firewall"
 ${DOCTL} compute firewall create \
     --name "${TAG_PREFIX}"-nodes \
-    --inbound-rules "protocol:tcp,ports:all,tag:${TAG_PREFIX}-master protocol:udp,ports:all,tag:${TAG_PREFIX}-master protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},load_balancer_uid:${PROMLB} protocol:tcp,ports:${GRAFPORT},load_balancer_uid:${GRAFLB}" \
+    --inbound-rules "protocol:icmp,tag:${TAG_PREFIX}-master,tag:${TAG_PREFIX}-node protocol:tcp,ports:all,tag:${TAG_PREFIX}-master protocol:udp,ports:all,tag:${TAG_PREFIX}-master protocol:tcp,ports:all,tag:${TAG_PREFIX}-node protocol:udp,ports:all,tag:${TAG_PREFIX}-node protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:${PROMPORT},load_balancer_uid:${PROMLB} protocol:tcp,ports:${GRAFPORT},load_balancer_uid:${GRAFLB}" \
     --outbound-rules "protocol:icmp,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0" \
     --tag-names "${TAG_PREFIX}"-node > /dev/null
 

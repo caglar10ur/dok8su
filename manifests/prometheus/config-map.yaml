@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: prometheus-server-conf
+  name: prometheus-config
   labels:
-    name: prometheus-server-conf
+    name: prometheus-config
   namespace: monitoring
 data:
   prometheus.yml: |-
@@ -48,7 +48,7 @@ data:
           target_label: __metrics_path__
           replacement: /api/v1/nodes/${1}/proxy/metrics
 
-      
+
       - job_name: 'kubernetes-pods'
 
         kubernetes_sd_configs:
@@ -96,7 +96,7 @@ data:
           regex: (.+)
           target_label: __metrics_path__
           replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
-      
+
       - job_name: 'kubernetes-service-endpoints'
 
         kubernetes_sd_configs:
