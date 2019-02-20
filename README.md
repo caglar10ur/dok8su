@@ -1,6 +1,6 @@
 # dok8su (u for unmanaged)
 
-**BEWARE: This is probably not you are looking for. Please see [dok8s](https://do.co/dok8s) for DigitalOcean's managed Kubernetes solution**
+**BEWARE: This is probably not the project you are looking for. Please see [dok8s](https://do.co/dok8s) for DigitalOcean's managed Kubernetes solution**
 
 > **Not For Production Use**
 
