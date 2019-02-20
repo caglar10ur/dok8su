@@ -4,7 +4,7 @@
 
 > **Not For Production Use**
 
-(Yet another) Collection of scripts to create an **unmanaged** [kubernetes](https://kubernetes.io/) cluster with multiple nodes using kubeadm from the latest stable version of kubernetes.
+(Yet another) Collection of scripts to create an **unmanaged** [kubernetes](https://kubernetes.io/) cluster with multiple nodes using [kubeadm](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm/) from the latest stable version of kubernetes.
 
 By default master uses 2gb and nodes use 4gb droplets. They can be configured via setting MASTER_SIZE and NODE_SIZE environment variables, respectively. Master and nodes uses the ubuntu 18.04 [bionic] image.
 
