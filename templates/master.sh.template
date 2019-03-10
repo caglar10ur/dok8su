@@ -108,7 +108,7 @@ ${KUBECTL} apply -f https://raw.githubusercontent.com/cilium/cilium/v1.4/example
 ${KUBECTL} -n kube-system create secret generic digitalocean --from-literal=access-token=${DIGITALOCEAN_ACCESS_TOKEN}
 
 # DigitalOcean Cloud-Manager
-${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/master/releases/v0.1.8.yml
+${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/master/releases/v0.1.10.yml
 
 # A Container Storage Interface (CSI) Driver for DigitalOcean Block Storage
 ${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v1.0.0.yaml
