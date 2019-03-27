@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Specify the Kubernetes version to use.
-KUBERNETES_VERSION="1.13.4"
-KUBERNETES_CNI="0.6.0"
-DOCKER_VERSION="5:18.09.2~3-0~ubuntu-bionic"
+KUBERNETES_VERSION="1.14.0"
+KUBERNETES_CNI="0.7.5"
+DOCKER_VERSION="5:18.09.3~3-0~ubuntu-bionic"
 
 KUBECTL_FLAGS="--kubeconfig /etc/kubernetes/admin.conf"
 KUBECTL="kubectl ${KUBECTL_FLAGS}"
@@ -41,9 +41,23 @@ HOSTNAME=$(curl -s http://169.254.169.254/metadata/v1/hostname)
 PUBLIC_IP=$(curl -s http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
 PRIVATE_IP=$(curl -s http://169.254.169.254/metadata/v1/interfaces/private/0/ipv4/address)
 
-# Enable and start Docker.
+# https://kubernetes.io/docs/setup/cri/
+cat > /etc/docker/daemon.json <<EOF
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+EOF
+
+mkdir -p /etc/systemd/system/docker.service.d
+
+systemctl daemon-reload
 systemctl enable docker
-systemctl start docker
+systemctl restart docker
 
 # Specify node IP for kubelet.
 echo "KUBELET_EXTRA_ARGS=--node-ip=${PRIVATE_IP} --cloud-provider=external --feature-gates=AdvancedAuditing=true,VolumeSnapshotDataSource=true,KubeletPluginsWatcher=true,CSINodeInfo=true,CSIDriverRegistry=true,BlockVolume=true,CSIBlockVolume=true" > /etc/default/kubelet
