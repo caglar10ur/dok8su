@@ -126,7 +126,8 @@ ${KUBECTL} -n kube-system create secret generic digitalocean --from-literal=acce
 ${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/master/releases/v0.1.13.yml
 
 # A Container Storage Interface (CSI) Driver for DigitalOcean Block Storage
-${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v1.1.0.yaml
+#${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v1.1.0.yaml
+${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v1.0.0.yaml
 
 # dashboard
 ${KUBECTL} create -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
