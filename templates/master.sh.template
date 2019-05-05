@@ -116,16 +116,17 @@ kubeadm reset --force
 kubeadm init --config /etc/kubeadm.config.yaml
 
 # cilium
-${KUBECTL} apply -f https://raw.githubusercontent.com/cilium/cilium/v1.4/examples/kubernetes/1.13/cilium.yaml
+${KUBECTL} apply -f https://raw.githubusercontent.com/cilium/cilium/v1.5/examples/kubernetes/1.14/cilium.yaml
 
 # DO secret
 ${KUBECTL} -n kube-system create secret generic digitalocean --from-literal=access-token=${DIGITALOCEAN_ACCESS_TOKEN}
 
 # DigitalOcean Cloud-Manager
+#${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/master/releases/v0.1.14.yml
 ${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/master/releases/v0.1.13.yml
 
 # A Container Storage Interface (CSI) Driver for DigitalOcean Block Storage
-${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v1.0.0.yaml
+${KUBECTL} apply -f https://raw.githubusercontent.com/digitalocean/csi-digitalocean/master/deploy/kubernetes/releases/csi-digitalocean-v1.1.0.yaml
 
 # dashboard
 ${KUBECTL} create -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml

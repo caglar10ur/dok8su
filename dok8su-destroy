@@ -10,16 +10,6 @@ API_ENDPOINT=${API_ENDPOINT:-https://api.digitalocean.com/}
 DOCTL_FLAGS="-u ${API_ENDPOINT}"
 DOCTL="doctl ${DOCTL_FLAGS}"
 
-if [ ! -f ~/.ssh/k8s/id_rsa ]; then
-    SSH_ID=$(${DOCTL} compute ssh-key list --format ID,Name --no-header | grep "k8s-ssh" | cut -d' ' -f1)
-    if [ -n "${SSH_ID}" ]; then
-        SSH_KEY=$(${DOCTL} compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
-    fi
-    if [ -n "${SSH_KEY}" ]; then
-        ${DOCTL} compute ssh-key delete "${SSH_KEY}" -f
-    fi
-fi
-
 echo "- Destroying the droplets"
 # delete the droplets
 NODES=()

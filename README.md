@@ -24,7 +24,7 @@ It uses [Kubernetes Cloud Controller Manager for DigitalOcean](https://github.co
 To create a cluster:
 
 ```sh
-$ DIGITALOCEAN_ACCESS_TOKEN=<omitted> REGION=nyc3 TAG_PREFIX=nyc3-k8s MASTER_NAME=master NODE_NAME=node NODE_COUNT=3 MASTER_SIZE=s-2vcpu-2gb NODE_SIZE=s-2vcpu-4gb ./dok8su-create
+$ DIGITALOCEAN_ACCESS_TOKEN=<omitted> SSH_KEY_NAME=yubikey REGION=nyc3 TAG_PREFIX=nyc3-k8s MASTER_NAME=master NODE_NAME=node NODE_COUNT=3 MASTER_SIZE=s-2vcpu-2gb NODE_SIZE=s-2vcpu-4gb ./dok8su-create
 - Creating the master
 - Waiting master to finish installation
 - Creating nodes
@@ -70,15 +70,16 @@ $ DIGITALOCEAN_ACCESS_TOKEN=<omitted> TAG_PREFIX=nyc3-k8s MASTER_NAME=master NOD
 
 ## Environment variables
 
-Name | Default Value
---- | ---
-REGION | nyc3
-MASTER_NAME | master
-NODE_NAME | node
-MASTER_SIZE | s-2vcpu-2gb
-NODE_SIZE | s-2vcpu-4gb
-NODE_COUNT | 3
-TAG_PREFIX | k8s
+Name | Default Value | Required
+--- | --- | ---
+REGION | sfo2 | no
+SSH_KEY_NAME | default | yes
+MASTER_NAME | master | no
+NODE_NAME | node | no
+MASTER_SIZE | s-2vcpu-2gb | no
+NODE_SIZE | s-2vcpu-4gb | no
+NODE_COUNT | 3 | no
+TAG_PREFIX | k8s | no
 
 # Acknowledgements
 

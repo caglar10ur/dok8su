@@ -5,7 +5,7 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # run 'doctl compute region list' for a list of available regions
-REGION=${REGION:-nyc3}
+REGION=${REGION:-sfo2}
 
 # name of the master
 MASTER_NAME=${MASTER_NAME:-master}
@@ -18,6 +18,8 @@ NODE_SIZE=${NODE_SIZE:-s-2vcpu-4gb}
 NODE_COUNT=${NODE_COUNT:-3}
 
 API_ENDPOINT=${API_ENDPOINT:-https://api.digitalocean.com/}
+
+SSH_KEY_NAME=${SSH_KEY_NAME:-default}
 
 TAG_PREFIX=${TAG_PREFIX:-k8s}
 
@@ -51,16 +53,7 @@ KUBECTL="kubectl ${KUBECTL_FLAGS}"
 DOCTL_FLAGS="-u ${API_ENDPOINT}"
 DOCTL="doctl ${DOCTL_FLAGS}"
 
-# generate k8s specific ssh keys
-if [ ! -f ~/.ssh/k8s/id_rsa ]; then
-    mkdir -p ~/.ssh/k8s/
-    ssh-keygen -t rsa -b 4096 -C "k8s" -f ~/.ssh/k8s/id_rsa -N '' > /dev/null
-
-    # import the new ssh key
-    ${DOCTL} compute ssh-key import k8s-ssh --public-key-file ~/.ssh/k8s/id_rsa.pub
-fi
-
-SSH_ID=$(${DOCTL} compute ssh-key list --format ID,Name --no-header | grep "k8s-ssh" | cut -d' ' -f1)
+SSH_ID=$(${DOCTL} compute ssh-key list --format ID,Name --no-header | grep "${SSH_KEY_NAME}" | cut -d' ' -f1)
 SSH_KEY=$(${DOCTL} compute ssh-key get "${SSH_ID}" --format FingerPrint --no-header)
 
 # create tags
@@ -96,7 +89,7 @@ PRIVATE_IP=$(${DOCTL} compute droplet get "${MASTER_ID}" --format PrivateIPv4 --
 
 echo "- Waiting master to finish installation"
 # wait till we get admin.conf
-while ! scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ~/.ssh/k8s/id_rsa root@"${PUBLIC_IP}":/etc/kubernetes/admin.conf admin."${TAG_PREFIX}".conf 2> /dev/null; do
+while ! scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@"${PUBLIC_IP}":/etc/kubernetes/admin.conf admin."${TAG_PREFIX}".conf 2> /dev/null; do
     sleep 10
 done
 
@@ -161,8 +154,8 @@ subjects:
 EOF
 
 echo "- Waiting load-balancers to be ready"
-PROMPORT=$(${KUBECTL} -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 9090.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
-GRAFPORT=$(${KUBECTL} -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 3000.0)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
+PROMPORT=$(${KUBECTL} -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 9090)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
+GRAFPORT=$(${KUBECTL} -n monitoring get svc -o 'go-template={{range .items}}{{range.spec.ports}}{{if and (.nodePort) (eq .targetPort 3000)}}{{.nodePort}}{{"\n"}}{{end}}{{end}}{{end}}')
 
 PROMLB=$(doctl compute load-balancer list | grep active | grep "protocol:tcp,port:${PROMPORT}" | cut -d' ' -f1)
 until [ ! -z "${PROMLB}" ]
